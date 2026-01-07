@@ -1,0 +1,7 @@
+mcp
+basic-pitch
+music21
+librosa
+numpy
+tensorflow
+pydub
