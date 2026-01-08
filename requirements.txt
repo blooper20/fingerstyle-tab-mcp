@@ -1,7 +1,16 @@
-mcp
-basic-pitch
-music21
-librosa
-numpy
-tensorflow
-pydub
+# MCP Server Framework
+mcp>=1.0.0
+
+# Audio Processing & AI
+basic-pitch>=0.2.5
+librosa>=0.10.0
+tensorflow>=2.13.0
+numpy>=1.24.0,<2.0.0
+pydub>=0.25.1
+
+# Music Theory
+music21>=9.1.0
+
+# Utilities
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
