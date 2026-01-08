@@ -1,7 +1,7 @@
 import os
 import sys
 from src.transcriber import transcribe_audio
-from src.tab_generator import create_tab
+from src.tab_generator import TabGenerator
 
 def test_conversion(audio_path):
     """
@@ -14,13 +14,14 @@ def test_conversion(audio_path):
     print(f"--- '{audio_path}' 분석 시작 ---")
     try:
         # 1. 전사 테스트
-        print("1. 오디오 분석 중 (Basic Pitch AI 모델 실행)...")
-        notes = transcribe_audio(audio_path)
-        print(f"   분석 완료: {len(notes)}개의 음이 검출되었습니다.")
+        print("1. 오디오 분석 중 (BPM 감지 및 Basic Pitch 실행)...")
+        notes, detected_bpm = transcribe_audio(audio_path)
+        print(f"   분석 완료: {len(notes)}개의 음이 검출되었습니다. (감지된 BPM: {detected_bpm:.2f})")
 
         # 2. 타브 생성 테스트
-        print("2. 기타 타브로 변환 중 (주법 및 운지 분석)...")
-        tab = create_tab(notes)
+        print("2. 기타 타브로 변환 중 (코드 기반 운지 및 주법 분석)...")
+        generator = TabGenerator(bpm=detected_bpm)
+        tab = generator.generate_ascii_tab(notes)
         
         print("\n--- 생성된 타브 악보 ---")
         print(tab)
