@@ -10,7 +10,7 @@ start:
     - mcp_server.py
 
 build:
-  system_dependencies:
-    - ffmpeg
   install:
     - pip install -r requirements.txt
+  system_dependencies:
+    - ffmpeg
