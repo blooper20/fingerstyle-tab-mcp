@@ -4,20 +4,20 @@ project:
   description: "AI-powered guitar tablature generator using Basic Pitch"
   version: 1.0.0
 
-# 1. 배포 및 실행 설정 (가장 중요)
+# 1. 실행 명령어 (Smithery 클라우드에서 서버를 띄우는 핵심 키)
 start:
   cmd: python3
   args:
     - mcp_server.py
 
-# 2. 빌드 환경 설정
+# 2. 빌드 환경 (필요한 패키지 및 ffmpeg 설치)
 build:
   system_dependencies:
     - ffmpeg
   install:
     - pip install -r requirements.txt
 
-# 3. 마켓플레이스 및 검색용 메타데이터
+# 3. 마켓플레이스 정보 (간략화)
 metadata:
   displayName: Fingerstyle Tab Generator
   author: 
@@ -25,30 +25,5 @@ metadata:
     github: blooper20
   categories:
     - music
-    - audio-processing
     - ai
-  tags:
-    - guitar
-    - tablature
-    - music-transcription
-    - basic-pitch
-    - audio-analysis
-    - mcp-server
   repository: https://github.com/blooper20/fingerstyle-tab-mcp
-  license: MIT
-
-# 4. 기능(Tools) 정의
-tools:
-  - name: analyze_audio_to_tab
-    description: "Convert audio files to guitar tablature with optional duration and start time"
-  - name: list_available_audio_files
-    description: "List all audio files in the resource directory"
-  - name: tweak_tab_fingering
-    description: "Adjust fingering preferences for specific pitches"
-  - name: get_standard_tuning
-    description: "Get standard guitar tuning reference information"
-
-# 5. 리소스 정의
-resources:
-  - name: "guitar://tuning/standard"
-    description: "Standard guitar tuning information"
