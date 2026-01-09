@@ -1,29 +1,16 @@
 version: 0.1.0
 project:
   name: fingerstyle-tab-mcp
-  description: "AI-powered guitar tablature generator using Basic Pitch"
+  description: "AI-powered guitar tablature generator"
   version: 1.0.0
 
-# 1. 실행 명령어 (Smithery 클라우드에서 서버를 띄우는 핵심 키)
 start:
   cmd: python3
   args:
     - mcp_server.py
 
-# 2. 빌드 환경 (필요한 패키지 및 ffmpeg 설치)
 build:
   system_dependencies:
     - ffmpeg
   install:
     - pip install -r requirements.txt
-
-# 3. 마켓플레이스 정보 (간략화)
-metadata:
-  displayName: Fingerstyle Tab Generator
-  author: 
-    name: blooper20
-    github: blooper20
-  categories:
-    - music
-    - ai
-  repository: https://github.com/blooper20/fingerstyle-tab-mcp
