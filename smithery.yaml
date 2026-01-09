@@ -1,107 +1,54 @@
-# Smithery MCP Server Configuration
-name: fingerstyle-tab-mcp
-displayName: Fingerstyle Tab Generator
-description: AI-powered guitar tablature generator that converts audio recordings into playable fingerstyle tabs using Spotify's Basic Pitch deep learning model.
+version: 0.1.0
+project:
+  name: fingerstyle-tab-mcp
+  description: "AI-powered guitar tablature generator using Basic Pitch"
+  version: 1.0.0
 
-# Categories (choose applicable ones)
-categories:
-  - music
-  - audio-processing
-  - ai
-  - transcription
+# 1. 배포 및 실행 설정 (가장 중요)
+start:
+  cmd: python3
+  args:
+    - mcp_server.py
 
-# Tags for discoverability
-tags:
-  - guitar
-  - tablature
-  - music-transcription
-  - basic-pitch
-  - audio-analysis
-  - fingerstyle
-  - chord-detection
-  - mcp-server
-
-# Author information
-author:
-  name: blooper20
-  github: blooper20
-  repository: https://github.com/blooper20/fingerstyle-tab-mcp
-
-# MCP Server configuration
-mcp:
-  # Installation command
-  install: |
-    git clone https://github.com/blooper20/fingerstyle-tab-mcp.git
-    cd fingerstyle-tab-mcp
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-
-  # Configuration for Claude Desktop
-  config:
-    mcpServers:
-      fingerstyle-mcp:
-        command: "{VENV_PATH}/bin/python3"
-        args:
-          - "{PROJECT_PATH}/mcp_server.py"
-        env:
-          PYTHONPATH: "{PROJECT_PATH}"
-
-# Features
-features:
-  - AI-powered audio transcription using Spotify's Basic Pitch
-  - Parallel processing for files over 45 seconds (3x faster)
-  - Smart fingering algorithm with open chord priority
-  - 40+ chord type recognition (Major, Minor, 7th, sus4, etc.)
-  - Automatic BPM detection
-  - Fuzzy file matching for easy file discovery
-  - Result caching for instant re-processing
-  - Multi-language support (English, Korean)
-
-# Requirements
-requirements:
-  python: ">=3.10"
-  system:
+# 2. 빌드 환경 설정
+build:
+  system_dependencies:
     - ffmpeg
+  install:
+    - pip install -r requirements.txt
 
-# Documentation links
-documentation:
-  readme: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/README.md
-  readmeKR: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/README_KR.md
-  license: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/LICENSE
+# 3. 마켓플레이스 및 검색용 메타데이터
+metadata:
+  displayName: Fingerstyle Tab Generator
+  author: 
+    name: blooper20
+    github: blooper20
+  categories:
+    - music
+    - audio-processing
+    - ai
+  tags:
+    - guitar
+    - tablature
+    - music-transcription
+    - basic-pitch
+    - audio-analysis
+    - mcp-server
+  repository: https://github.com/blooper20/fingerstyle-tab-mcp
+  license: MIT
 
-# MCP Tools provided
+# 4. 기능(Tools) 정의
 tools:
   - name: analyze_audio_to_tab
-    description: Convert audio files to guitar tablature with optional duration and start time parameters
+    description: "Convert audio files to guitar tablature with optional duration and start time"
   - name: list_available_audio_files
-    description: List all audio files in the resource directory
+    description: "List all audio files in the resource directory"
   - name: tweak_tab_fingering
-    description: Adjust fingering preferences for specific pitches
+    description: "Adjust fingering preferences for specific pitches"
   - name: get_standard_tuning
-    description: Get standard guitar tuning reference information
+    description: "Get standard guitar tuning reference information"
 
-# Resources provided
+# 5. 리소스 정의
 resources:
-  - name: guitar://tuning/standard
-    description: Standard guitar tuning information
-
-# Example usage
-examples:
-  - title: Basic Usage
-    description: Analyze a guitar recording and generate tablature
-    code: |
-      # Via Claude Desktop
-      "Analyze 'my_song.mp3' and create a guitar tab"
-
-  - title: Partial Analysis
-    description: Analyze specific section of a song
-    code: |
-      # Via Claude Desktop
-      "Analyze just the first 30 seconds starting from 10 seconds in"
-
-# Version
-version: 1.0.0
-
-# License
-license: MIT
+  - name: "guitar://tuning/standard"
+    description: "Standard guitar tuning information"
