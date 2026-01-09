@@ -1,0 +1,107 @@
+# Smithery MCP Server Configuration
+name: fingerstyle-tab-mcp
+displayName: Fingerstyle Tab Generator
+description: AI-powered guitar tablature generator that converts audio recordings into playable fingerstyle tabs using Spotify's Basic Pitch deep learning model.
+
+# Categories (choose applicable ones)
+categories:
+  - music
+  - audio-processing
+  - ai
+  - transcription
+
+# Tags for discoverability
+tags:
+  - guitar
+  - tablature
+  - music-transcription
+  - basic-pitch
+  - audio-analysis
+  - fingerstyle
+  - chord-detection
+  - mcp-server
+
+# Author information
+author:
+  name: blooper20
+  github: blooper20
+  repository: https://github.com/blooper20/fingerstyle-tab-mcp
+
+# MCP Server configuration
+mcp:
+  # Installation command
+  install: |
+    git clone https://github.com/blooper20/fingerstyle-tab-mcp.git
+    cd fingerstyle-tab-mcp
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    pip install -r requirements.txt
+
+  # Configuration for Claude Desktop
+  config:
+    mcpServers:
+      fingerstyle-mcp:
+        command: "{VENV_PATH}/bin/python3"
+        args:
+          - "{PROJECT_PATH}/mcp_server.py"
+        env:
+          PYTHONPATH: "{PROJECT_PATH}"
+
+# Features
+features:
+  - AI-powered audio transcription using Spotify's Basic Pitch
+  - Parallel processing for files over 45 seconds (3x faster)
+  - Smart fingering algorithm with open chord priority
+  - 40+ chord type recognition (Major, Minor, 7th, sus4, etc.)
+  - Automatic BPM detection
+  - Fuzzy file matching for easy file discovery
+  - Result caching for instant re-processing
+  - Multi-language support (English, Korean)
+
+# Requirements
+requirements:
+  python: ">=3.10"
+  system:
+    - ffmpeg
+
+# Documentation links
+documentation:
+  readme: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/README.md
+  readmeKR: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/README_KR.md
+  license: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/LICENSE
+
+# MCP Tools provided
+tools:
+  - name: analyze_audio_to_tab
+    description: Convert audio files to guitar tablature with optional duration and start time parameters
+  - name: list_available_audio_files
+    description: List all audio files in the resource directory
+  - name: tweak_tab_fingering
+    description: Adjust fingering preferences for specific pitches
+  - name: get_standard_tuning
+    description: Get standard guitar tuning reference information
+
+# Resources provided
+resources:
+  - name: guitar://tuning/standard
+    description: Standard guitar tuning information
+
+# Example usage
+examples:
+  - title: Basic Usage
+    description: Analyze a guitar recording and generate tablature
+    code: |
+      # Via Claude Desktop
+      "Analyze 'my_song.mp3' and create a guitar tab"
+
+  - title: Partial Analysis
+    description: Analyze specific section of a song
+    code: |
+      # Via Claude Desktop
+      "Analyze just the first 30 seconds starting from 10 seconds in"
+
+# Version
+version: 1.0.0
+
+# License
+license: MIT
