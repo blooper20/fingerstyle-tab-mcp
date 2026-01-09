@@ -66,9 +66,9 @@ requirements:
 
 # Documentation links
 documentation:
-  readme: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/README.md
-  readmeKR: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/README_KR.md
-  license: https://github.com/blooper20/fingerstyle-tab-mcp/blob/develop/LICENSE
+  readme: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/README.md
+  readmeKR: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/README_KR.md
+  license: https://github.com/blooper20/fingerstyle-tab-mcp/blob/main/LICENSE
 
 # MCP Tools provided
 tools:
