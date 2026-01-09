@@ -14,3 +14,8 @@ music21>=9.1.0
 # Utilities
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
+
+# Web Server (for HTTP MCP deployment)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
