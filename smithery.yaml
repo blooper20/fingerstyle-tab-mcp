@@ -1,7 +1,7 @@
 version: 0.1.0
 project:
   name: fingerstyle-tab-mcp
-  description: AI-powered guitar tablature generator
+  description: fingerstyle tab generator
   version: 1.0.0
 
 start:
@@ -12,5 +12,3 @@ start:
 build:
   install:
     - pip install -r requirements.txt
-  system_dependencies:
-    - ffmpeg
