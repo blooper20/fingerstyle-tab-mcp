@@ -1,7 +1,7 @@
 version: 0.1.0
 project:
   name: fingerstyle-tab-mcp
-  description: fingerstyle tab generator
+  description: guitar tab generator
   version: 1.0.0
 
 start:
