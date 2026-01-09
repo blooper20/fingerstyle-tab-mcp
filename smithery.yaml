@@ -6,11 +6,8 @@ project:
 
 start:
   cmd: python3
-  args:
-    - mcp_server.py
+  args: ["mcp_server.py"]
 
 build:
-  install:
-    - pip install -r requirements.txt
-  system_dependencies:
-    - ffmpeg
+  install: ["pip install -r requirements.txt"]
+  system_dependencies: ["ffmpeg"]
