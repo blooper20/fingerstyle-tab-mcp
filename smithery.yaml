@@ -1,11 +1,11 @@
-version: 0.1.0
+version: "0.1.0"
 project:
-  name: fingerstyle-tab-mcp
+  name: "fingerstyle-tab-mcp"
   description: "AI-powered guitar tablature generator"
-  version: 1.0.0
+  version: "1.0.0"
 
 start:
-  cmd: python3
+  cmd: "python3"
   args: ["mcp_server.py"]
 
 build:
