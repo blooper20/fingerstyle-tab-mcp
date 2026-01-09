@@ -164,10 +164,10 @@ class TabGenerator:
             ))
 
             # Initialize tab grid
-            full_tab = [[["-" for _ in range(slots_per_measure)]
-                         for _ in range(num_measures)]
-                        for _ in range(self.num_strings)]
-            measure_chords = ["N.C." for _ in range(num_measures)]
+            full_tab = [[["-" for ___ in range(slots_per_measure)]
+                         for ___ in range(num_measures)]
+                        for ___ in range(self.num_strings)]
+            measure_chords = ["N.C." for ___ in range(num_measures)]
 
             # Detect chords for each measure
             for m_idx in range(num_measures):
