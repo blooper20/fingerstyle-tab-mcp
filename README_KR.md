@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 
 AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 타브 악보로 자동 변환해주는 MCP (Model Context Protocol) 서버입니다. 최신 딥러닝 모델로 기타 연주를 분석하고 정확하고 연주 가능한 타브 악보를 생성합니다.
 
@@ -11,7 +11,7 @@ AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 �
 ## ✨ 주요 기능
 
 - **🎵 AI 기반 음악 분석**: Spotify의 Basic Pitch 딥러닝 모델을 활용한 고정밀 음정 감지
-- **⚡ 병렬 처리**: 45초 이상의 긴 오디오 파일을 멀티스레드 청크 처리로 1분 이내에 분석
+- **⚡ 병렬 처리**: 45초 이상의 긴 오디오 파일을 멀티스레드 청크 처리로 효율적 분석
 - **🎯 스마트 운지 매핑**: 연주 가능한 오픈 코드 형태(0-5프렛 중심)를 우선하는 지능형 운지 로직
 - **🎼 고급 코드 인식**: 40개 이상의 코드 형태 자동 인식 (메이저, 마이너, 7th, sus4, dim, aug 등)
 - **⏱️ BPM 자동 감지**: Librosa를 통한 지능형 템포 분석 및 정확한 마디 정렬
@@ -53,8 +53,6 @@ AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 �
 
 ### 설치 방법
 
-#### 옵션 1: 소스코드에서 설치 (권장)
-
 ```bash
 # 저장소 클론
 git clone https://github.com/blooper20/fingerstyle-tab-mcp.git
@@ -66,15 +64,6 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 의존성 설치
 pip install -r requirements.txt
-
-# 선택사항: 개발 모드로 설치
-pip install -e .
-```
-
-#### 옵션 2: 패키지로 설치
-
-```bash
-pip install git+https://github.com/blooper20/fingerstyle-tab-mcp.git
 ```
 
 ## 📖 사용 방법
@@ -176,14 +165,6 @@ tail -f ~/Library/Logs/Claude/mcp-server-fingerstyle-mcp.log
 >
 > 분석 성공 (시작: 10.0초, 길이: 30.0초)...
 
----
-
-> **사용자**: "음정 65번을 3번 줄에서 연주하고 싶어"
->
-> **Claude**: *`tweak_tab_fingering` 도구 사용*
->
-> 음정 65를 3번 줄 (D)에서 연주하도록 설정을 업데이트했습니다
-
 #### 3. 사용 가능한 MCP 도구
 
 서버는 Claude에게 다음 도구들을 제공합니다:
@@ -283,9 +264,9 @@ tab = generator.generate_ascii_tab(notes)
 
 45초 이상의 오디오 파일에 대해 자동으로:
 - 2초 겹침을 가진 30초 청크로 파일 분할
-- 4개의 워커 스레드로 청크 병렬 처리
+- 여러 워커 스레드로 청크 병렬 처리
 - 결과 병합 및 겹치는 음표 중복 제거
-- **결과**: 3분 처리 시간을 1분 이하로 단축!
+- **결과**: 긴 파일의 처리 시간을 크게 단축
 
 ```python
 # 긴 파일에 대한 자동 병렬 처리
@@ -422,11 +403,11 @@ resource/ 폴더에 있는 파일들:
 
 ### `tweak_tab_fingering`
 
-특정 MIDI 음정에 대한 선호 줄 제안 (계획된 기능).
+특정 MIDI 음정의 선호 줄 제안.
 
 **파라미터:**
 - `note_pitch` (정수, 필수): MIDI 음정 (0-127)
-- `preferred_string` (정수, 필수): 목표 줄 번호 (1=높은 E, 6=낮은 E)
+- `preferred_string` (정수, 필수): 대상 줄 번호 (1=높은 E, 6=낮은 E)
 
 **반환값:**
 - 확인 메시지
@@ -448,47 +429,47 @@ resource/ 폴더에 있는 파일들:
 fingerstyle-tab-mcp/
 ├── src/
 │   ├── transcriber.py       # 오디오 분석 & 병렬 처리
-│   │   ├── transcribe_audio()      # 메인 분석 함수
+│   │   ├── transcribe_audio()      # 메인 음악 분석 함수
 │   │   ├── get_model()             # 모델 캐싱
 │   │   └── _transcribe_chunk()     # 청크 처리
 │   ├── tab_generator.py     # 스마트 운지 & ASCII 타브 생성
 │   │   ├── TabGenerator            # 메인 생성기 클래스
 │   │   ├── create_tab()            # 고수준 API
-│   │   └── CHORD_LIBRARY           # 40+ 코드 템플릿
+│   │   └── CHORD_LIBRARY           # 40개 이상 코드 템플릿
 │   └── config.py            # 설정 관리
-├── locales/                 # 다국어 지원 파일
+├── locales/                 # 다국어 파일
 │   ├── en/LC_MESSAGES/      # 영어 번역
 │   └── ko/LC_MESSAGES/      # 한국어 번역
-├── resource/                # 예시 오디오 파일 (여기에 파일 배치)
-├── mcp_server.py            # FastMCP 서버 구현
+├── resource/                # 예제 오디오 파일 (여기에 파일 배치)
+├── mcp_server.py            # MCP 서버 구현
 ├── test_workflow.py         # 커맨드라인 테스트 도구
 ├── requirements.txt         # Python 의존성
 ├── setup.py                 # 패키지 설치 스크립트
-├── config.yaml.example      # 예시 설정
+├── config.yaml.example      # 설정 예시
 ├── README.md                # 영문 문서
-├── README_KR.md             # 이 파일
+├── README_KR.md             # 이 문서
 └── LICENSE                  # MIT 라이선스
 ```
 
-### 핵심 컴포넌트
+### 주요 컴포넌트
 
-- **`src/transcriber.py`**: 오디오 분석 엔진
-  - 긴 파일(45초 이상)에 대한 병렬 처리
+- **[src/transcriber.py](src/transcriber.py)**: 오디오 분석 엔진
+  - 긴 파일 병렬 처리 (45초 이상)
   - 재로딩 방지를 위한 전역 모델 캐싱
-  - Librosa를 사용한 BPM 감지
-  - Spotify의 Basic Pitch를 사용한 음표 추출
+  - Librosa를 이용한 BPM 감지
+  - Spotify Basic Pitch로 음표 추출
   - 청크 수준 에러 핸들링
 
-- **`src/tab_generator.py`**: 타브 생성 엔진
-  - 40개 이상의 코드 타입 인식
+- **[src/tab_generator.py](src/tab_generator.py)**: 타브 생성 엔진
+  - 40개 이상 코드 타입 인식
   - 스마트 운지 알고리즘 (오픈 코드 우선)
-  - 코드 주석이 있는 ASCII 타브 렌더링
+  - 코드 주석이 포함된 ASCII 타브 렌더링
   - 마디 기반 포맷팅
 
-- **`mcp_server.py`**: MCP 프로토콜 서버
-  - 퍼지 매칭을 통한 스마트 파일 탐색
+- **[mcp_server.py](mcp_server.py)**: MCP 프로토콜 서버
+  - 퍼지 매칭을 통한 스마트 파일 검색
   - 성능을 위한 결과 캐싱
-  - 포괄적인 에러 핸들링
+  - 포괄적 에러 핸들링
   - stdout/stderr 깔끔한 분리
   - 다국어 지원
 
@@ -497,7 +478,7 @@ fingerstyle-tab-mcp/
 ### 예시 1: 기본 사용법
 
 ```bash
-# resource/ 디렉토리에 기타 녹음 배치
+# resource/ 디렉토리에 기타 녹음 파일 배치
 cp ~/Music/my_song.mp3 resource/
 
 # 분석 실행
@@ -510,7 +491,7 @@ python test_workflow.py "my_song"
 from src.transcriber import transcribe_audio
 from src.tab_generator import create_tab
 
-# 후렴구만 분석 (1분 20초부터 30초간)
+# 후렴구만 분석 (1:20부터 30초)
 notes, bpm = transcribe_audio(
     "resource/song.mp3",
     start_offset=80.0,      # 1:20 = 80초
@@ -546,10 +527,10 @@ from src.tab_generator import create_tab
 
 # 디렉토리의 모든 MP3 파일 처리
 for audio_file in glob.glob("resource/*.mp3"):
-    print(f"{audio_file} 처리 중...")
+    print(f"처리 중: {audio_file}...")
 
     try:
-        # 분석
+        # 음악 분석
         notes, bpm = transcribe_audio(audio_file)
 
         # 타브 생성
@@ -565,20 +546,16 @@ for audio_file in glob.glob("resource/*.mp3"):
         print(f"✗ 실패: {e}")
 ```
 
-### 예시 5: Claude Desktop과 함께 사용
-
-Claude와의 대화형 사용에 대한 상세 예시는 [Claude Desktop 연동](#claude-desktop-연동-권장)을 참조하세요.
-
 ## 🌍 다국어 지원
 
-이 프로젝트는 `gettext`를 사용하여 다국어를 지원합니다.
+이 프로젝트는 `gettext`를 사용하여 여러 언어를 지원합니다.
 
 ### 지원 언어
 
-- **한국어** (ko) - 완전 지원
-- **영어** (en) - 기본값
+- **English** (en) - 기본
+- **Korean** (ko) - 한국어 완전 지원
 
-### 새로운 언어 추가하기
+### 새 언어 추가
 
 1. **번역 가능한 문자열 추출:**
 ```bash
@@ -587,18 +564,18 @@ xgettext -o locales/messages.pot src/*.py mcp_server.py
 
 2. **언어별 번역 생성:**
 ```bash
-# 'ja'를 언어 코드로 교체 (예: 'es'는 스페인어)
+# 'ja'를 원하는 언어 코드로 변경 (예: 'es' for Spanish)
 msginit -i locales/messages.pot -o locales/ja/LC_MESSAGES/messages.po -l ja
 ```
 
-3. **`.po` 파일에서 문자열 번역**
+3. **`.po` 파일의 문자열 번역**
 
 4. **번역 컴파일:**
 ```bash
 msgfmt locales/ja/LC_MESSAGES/messages.po -o locales/ja/LC_MESSAGES/messages.mo
 ```
 
-5. **언어 환경 변수 설정:**
+5. **언어 환경변수 설정:**
 ```bash
 export LANG=ja_JP.UTF-8  # 일본어의 경우
 python test_workflow.py "song.mp3"
@@ -608,19 +585,19 @@ python test_workflow.py "song.mp3"
 
 ### 일반적인 문제
 
-#### 문제: MCP 서버가 Claude Desktop에 나타나지 않음
+#### 문제: Claude Desktop에서 MCP 서버가 보이지 않음
 
-**해결 방법:**
+**해결방법:**
 1. 설정 파일 경로 확인:
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-2. 경로가 절대 경로인지 확인 (상대 경로 X)
-3. Claude Desktop 완전히 재시작 (Cmd+Q, 창만 닫기 X)
+2. 경로가 절대 경로인지 확인 (상대 경로 아님)
+3. Claude Desktop 완전히 재시작 (macOS: Cmd+Q, 창 닫기가 아님)
 4. 로그 확인: `tail -f ~/Library/Logs/Claude/mcp-server-fingerstyle-mcp.log`
 
-#### 문제: 서버가 시작되지만 즉시 크래시
+#### 문제: 서버가 시작되지만 즉시 종료됨
 
-**해결 방법:**
+**해결방법:**
 1. 로그에서 시작 배너 확인:
    ```
    🚀 FINGERSTYLE MCP SERVER IS NOW ONLINE AND READY
@@ -637,7 +614,7 @@ python test_workflow.py "song.mp3"
 
 #### 문제: `ModuleNotFoundError: No module named 'basic_pitch'`
 
-**해결 방법:**
+**해결방법:**
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
@@ -645,50 +622,50 @@ pip install -r requirements.txt
 
 #### 문제: `FileNotFoundError: Audio file not found`
 
-**해결 방법:**
-- 파일이 `resource/` 디렉토리에 있는지 확인
+**해결방법:**
+- 파일이 `resource/` 디렉토리에 존재하는지 확인
 - `list_available_audio_files` 도구로 사용 가능한 파일 확인
-- 파일명의 일부만으로 퍼지 매칭 시도
+- 파일명 일부로 퍼지 매칭 시도
 
-#### 문제: 병렬 처리가 "청크 에러"로 실패
+#### 문제: 병렬 처리가 "chunk error"로 실패
 
-**해결 방법:**
-- 일반적으로 오디오 청크 중 하나를 처리하지 못했음을 의미
-- 실패한 특정 청크에 대한 에러 로그 확인
-- 짧은 duration으로 처리하여 문제 격리
-- 오디오 파일이 손상되지 않았는지 확인
+**해결방법:**
+- 일반적으로 오디오 청크 중 하나가 처리되지 못한 것
+- 에러 로그에서 실패한 특정 청크 확인
+- 더 짧은 구간 처리로 문제 격리
+- 오디오 파일 손상 여부 확인
 
-#### 문제: BPM 감지가 부정확
+#### 문제: BPM 감지가 부정확함
 
-**해결 방법:**
-- BPM 감지에 오디오의 처음 60초가 사용됨
+**해결방법:**
+- 오디오의 처음 60초가 BPM 감지에 사용됨
 - 파일 시작 부분에 명확한 리듬이 있는지 확인
-- 코드에서 BPM을 수동으로 재정의:
+- 코드에서 BPM 수동 오버라이드 가능:
   ```python
   notes, _ = transcribe_audio("song.mp3")
-  tab = create_tab(notes, bpm=120)  # BPM을 120으로 강제
+  tab = create_tab(notes, bpm=120)  # BPM을 120으로 고정
   ```
 
-#### 문제: 음표가 감지되지 않거나 매우 적음
+#### 문제: 음표가 감지되지 않거나 매우 적게 감지됨
 
-**해결 방법:**
-- 믹스에서 기타가 두드러지는지 확인 (다른 악기에 묻히지 않도록)
-- 오디오 파일의 볼륨을 높여보기
-- 오디오 품질이 좋은지 확인 (과도하게 압축되지 않도록)
-- 솔로 기타 녹음이 가장 잘 작동
+**해결방법:**
+- 믹스에서 기타가 두드러지는지 확인 (다른 악기에 묻혀있지 않은지)
+- 오디오 파일 볼륨 증가 시도
+- 오디오 품질이 좋은지 확인 (과도하게 압축되지 않았는지)
+- 솔로 기타 녹음이 최적
 
 #### 문제: 타브 악보가 연주 불가능하거나 이상한 운지 사용
 
-**해결 방법:**
-- 알고리즘이 오픈 코드 형태(0-5 프렛)를 우선함
-- 특정 음표 조정을 위해 `tweak_tab_fingering` 도구 사용
+**해결방법:**
+- 알고리즘이 오픈 코드 형태 우선 (0-5 프렛)
+- `tweak_tab_fingering` 도구로 특정 음표 조정 시도
 - 원본 녹음이 다른 튜닝을 사용하는지 고려
 
 ### 도움 받기
 
-- 📝 **버그 리포트**: [이슈 열기](https://github.com/blooper20/fingerstyle-tab-mcp/issues)
+- 📝 **버그 리포트**: [이슈 등록](https://github.com/blooper20/fingerstyle-tab-mcp/issues)
 - 💬 **질문하기**: [토론 시작](https://github.com/blooper20/fingerstyle-tab-mcp/discussions)
-- 📖 **문서 확인**: 영문 문서는 [English README](./README.md) 참조
+- 📖 **문서 확인**: [영문 README](./README.md) 참조
 
 ### 디버그 모드
 
@@ -699,32 +676,14 @@ pip install -r requirements.txt
 logging:
   level: DEBUG
 
-# 또는 환경 변수 설정
+# 또는 환경변수 설정
 export LOG_LEVEL=DEBUG
 python test_workflow.py "song.mp3"
 ```
 
-## 🧪 테스트
-
-테스트 스위트 실행:
-
-```bash
-# 개발 의존성 설치
-pip install -e ".[dev]"
-
-# 테스트 실행
-pytest
-
-# 커버리지와 함께 실행
-pytest --cov=src --cov-report=html
-
-# 커버리지 리포트 보기
-open htmlcov/index.html  # macOS
-```
-
 ## 🤝 기여하기
 
-기여를 환영합니다! 가이드라인은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참조하세요.
+기여를 환영합니다! 다음과 같이 도움을 주실 수 있습니다:
 
 ### 개발 환경 설정
 
@@ -737,40 +696,35 @@ cd fingerstyle-tab-mcp
 python3 -m venv venv
 source venv/bin/activate
 
-# 개발 의존성과 함께 설치
-pip install -e ".[dev]"
+# 의존성 설치
+pip install -r requirements.txt
 
-# 코드 포맷팅 실행
-black src/ test/
-isort src/ test/
-
-# 린팅 실행
-flake8 src/ test/
-mypy src/
+# 테스트 실행 (있는 경우)
+python -m pytest tests/
 ```
 
-### 기여 영역
+### 기여 가능 영역
 
 - 🎵 **정확도 개선**: 더 나은 코드 감지 및 운지 알고리즘
-- 🎸 **기능 추가**: 대체 튜닝, 카포 위치 지원
+- 🎸 **기능 추가**: 대체 튜닝, 카포 위치, MIDI 내보내기 지원
 - 🌍 **번역**: 더 많은 언어 지원 추가
 - 📊 **시각화**: PDF 내보내기, 더 나은 ASCII 렌더링
-- 🧪 **테스트**: 테스트 커버리지 증가
+- 🧪 **테스팅**: 테스트 커버리지 추가
 - 📖 **문서화**: 예시 및 튜토리얼 개선
 - 🐛 **버그 수정**: 이슈 및 엣지 케이스 수정
 - ⚡ **성능**: 처리 속도 최적화
 
 ### 커밋 메시지 가이드라인
 
-conventional commits 사용:
+Conventional Commits을 사용합니다:
 
 ```
 feat: MIDI 내보내기 기능 추가
-fix: suspended 코드에 대한 코드 감지 해결
-docs: 설치 가이드 업데이트
-style: black으로 코드 포맷팅
-refactor: 타브 생성 로직 단순화
-test: 병렬 처리에 대한 테스트 추가
+fix: suspended 코드 감지 해결
+docs: 설치 방법 업데이트
+style: black으로 코드 포맷
+refactor: 타브 생성 로직 간소화
+test: 병렬 처리 테스트 추가
 chore: 의존성 업데이트
 ```
 
@@ -782,53 +736,37 @@ chore: 의존성 업데이트
 - [Librosa](https://librosa.org/) - 오디오 분석 및 BPM 감지
 - [Music21](https://web.mit.edu/music21/) - 음악 이론 및 코드 감지
 - [FastMCP](https://github.com/jlowin/fastmcp) - MCP 서버 프레임워크
-- [NumPy](https://numpy.org/) - 수치 연산
+- [NumPy](https://numpy.org/) - 수치 계산
 - [SoundFile](https://github.com/bastibe/python-soundfile) - 오디오 I/O
 
-이 프로젝트를 가능하게 해준 오픈소스 커뮤니티에 특별히 감사드립니다.
+이 프로젝트를 가능하게 해준 오픈소스 커뮤니티에 감사드립니다.
 
 ## 📜 라이선스
 
-이 프로젝트는 [MIT 라이선스](./LICENSE)를 따릅니다.
+이 프로젝트는 [MIT License](./LICENSE)에 따라 라이선스가 부여됩니다.
 
-상업적 사용을 포함한 모든 목적으로 이 소프트웨어를 자유롭게 사용, 수정, 배포할 수 있습니다.
+상업적 사용을 포함하여 모든 목적으로 이 소프트웨어를 자유롭게 사용, 수정 및 배포할 수 있습니다.
 
 ## 🗺️ 로드맵
 
-### 단기 (v1.1)
+### 단기
 - [ ] MIDI 파일 내보내기
 - [ ] 대체 튜닝 지원 (Drop D, DADGAD 등)
 - [ ] 카포 위치 감지
-- [ ] 개선된 운지 커스터마이징
+- [ ] 운지 커스터마이징 개선
 
-### 중기 (v1.5)
-- [ ] 악보가 포함된 PDF 타브 악보 내보내기
-- [ ] 실시간 오디오 처리 (라이브 변환)
+### 중기
+- [ ] 악보 표기가 포함된 PDF 타브 내보내기
 - [ ] Guitar Pro 형식 내보내기
-- [ ] 비기술자를 위한 웹 인터페이스
+- [ ] 웹 기반 데모 인터페이스
 
-### 장기 (v2.0)
-- [ ] 모바일 앱 통합
+### 장기
 - [ ] 여러 악기 지원 (베이스, 우쿨렐레)
-- [ ] 협업 타브 편집
-- [ ] 더 빠른 결과를 위한 클라우드 처리
 - [ ] 커스텀 운지 선호도를 위한 머신러닝
-
-## 📊 성능 벤치마크
-
-MacBook Pro M1에서 테스트:
-
-| 오디오 길이 | 순차 처리 | 병렬 처리 | 속도 향상 |
-|-------------|----------|----------|----------|
-| 30초        | ~8초     | ~8초     | 1배      |
-| 60초        | ~25초    | ~12초    | 2.1배    |
-| 120초       | ~95초    | ~22초    | 4.3배    |
-| 180초       | ~170초   | ~35초    | 4.9배    |
-
-*참고: 45초 이상 파일에서 자동으로 병렬 처리 활성화*
+- [ ] 실시간 오디오 처리
 
 ---
 
-**오픈소스 커뮤니티가 ❤️를 담아 만들었습니다**
+**오픈소스 커뮤니티를 위해 ❤️로 만들었습니다**
 
-**유용하다면 이 레포에 스타** ⭐를 눌러주세요!
+**유용하다면 이 저장소에 별표** ⭐를 눌러주세요!

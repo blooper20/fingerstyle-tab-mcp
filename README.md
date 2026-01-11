@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 
 An AI-powered MCP (Model Context Protocol) server that converts guitar audio recordings into high-quality fingerstyle tablature. This tool uses cutting-edge AI models to analyze your guitar playing and generate accurate, playable tabs automatically.
 
@@ -11,7 +11,7 @@ An AI-powered MCP (Model Context Protocol) server that converts guitar audio rec
 ## ✨ Features
 
 - **🎵 AI-Powered Transcription**: High-precision note detection using Spotify's Basic Pitch deep learning model
-- **⚡ Parallel Processing**: Process long audio files (45+ seconds) in under 1 minute using multi-threaded chunk processing
+- **⚡ Parallel Processing**: Process long audio files (45+ seconds) efficiently using multi-threaded chunk processing
 - **🎯 Smart Fingering**: Chord-based mapping logic that prioritizes playable open-chord shapes (0-5 fret focus)
 - **🎼 Advanced Chord Recognition**: Automatic chord detection with 40+ chord shapes (Major, Minor, 7th, sus4, dim, aug, etc.)
 - **⏱️ Auto BPM Detection**: Intelligent tempo detection using Librosa for accurate measure-based formatting
@@ -53,8 +53,6 @@ Before you begin, ensure you have the following installed:
 
 ### Installation
 
-#### Option 1: Install from source (Recommended)
-
 ```bash
 # Clone the repository
 git clone https://github.com/blooper20/fingerstyle-tab-mcp.git
@@ -66,15 +64,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Optional: Install in development mode
-pip install -e .
-```
-
-#### Option 2: Install as a package
-
-```bash
-pip install git+https://github.com/blooper20/fingerstyle-tab-mcp.git
 ```
 
 ## 📖 Usage
@@ -176,14 +165,6 @@ Once configured, you can interact with Claude using natural language:
 >
 > Analysis Successful (Start: 10.0s, Duration: 30.0s)...
 
----
-
-> **You**: "I want pitch 65 to be played on string 3 instead"
->
-> **Claude**: *Uses `tweak_tab_fingering` tool*
->
-> Updated configuration to play pitch 65 on string 3 (D)
-
 #### 3. Available MCP Tools
 
 The server exposes the following tools to Claude:
@@ -283,9 +264,9 @@ tab = generator.generate_ascii_tab(notes)
 
 For audio files longer than 45 seconds, the server automatically:
 - Splits the file into 30-second chunks with 2-second overlap
-- Processes chunks in parallel using 4 worker threads
+- Processes chunks in parallel using multiple worker threads
 - Merges results and deduplicates overlapping notes
-- **Result**: 3-minute processing time reduced to under 1 minute!
+- **Result**: Significantly reduced processing time for long files
 
 ```python
 # Automatic parallel processing for long files
@@ -422,7 +403,7 @@ Available files in 'resource/':
 
 ### `tweak_tab_fingering`
 
-Suggest preferred string for a specific MIDI pitch (planned feature).
+Suggest preferred string for a specific MIDI pitch.
 
 **Parameters:**
 - `note_pitch` (int, required): MIDI pitch (0-127)
@@ -460,7 +441,7 @@ fingerstyle-tab-mcp/
 │   ├── en/LC_MESSAGES/      # English translations
 │   └── ko/LC_MESSAGES/      # Korean translations
 ├── resource/                # Example audio files (place your files here)
-├── mcp_server.py            # FastMCP server implementation
+├── mcp_server.py            # MCP server implementation
 ├── test_workflow.py         # Command-line testing tool
 ├── requirements.txt         # Python dependencies
 ├── setup.py                 # Package installation script
@@ -472,20 +453,20 @@ fingerstyle-tab-mcp/
 
 ### Key Components
 
-- **`src/transcriber.py`**: Audio analysis engine
+- **[src/transcriber.py](src/transcriber.py)**: Audio analysis engine
   - Parallel processing for long files (45+ seconds)
   - Global model caching to avoid reloading
   - BPM detection using Librosa
   - Note extraction using Spotify's Basic Pitch
   - Chunk-level error handling
 
-- **`src/tab_generator.py`**: Tab generation engine
+- **[src/tab_generator.py](src/tab_generator.py)**: Tab generation engine
   - 40+ chord type recognition
   - Smart fingering algorithm (open chord priority)
   - ASCII tab rendering with chord annotations
   - Measure-based formatting
 
-- **`mcp_server.py`**: MCP protocol server
+- **[mcp_server.py](mcp_server.py)**: MCP protocol server
   - Smart file resolution with fuzzy matching
   - Result caching for performance
   - Comprehensive error handling
@@ -564,10 +545,6 @@ for audio_file in glob.glob("resource/*.mp3"):
     except Exception as e:
         print(f"✗ Failed: {e}")
 ```
-
-### Example 5: Using with Claude Desktop
-
-See [Claude Desktop Integration](#claude-desktop-integration-recommended) for detailed examples of interactive use with Claude.
 
 ## 🌍 Internationalization
 
@@ -704,27 +681,9 @@ export LOG_LEVEL=DEBUG
 python test_workflow.py "song.mp3"
 ```
 
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run with coverage
-pytest --cov=src --cov-report=html
-
-# View coverage report
-open htmlcov/index.html  # macOS
-```
-
 ## 🤝 Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Here's how you can help:
 
 ### Development Setup
 
@@ -737,25 +696,20 @@ cd fingerstyle-tab-mcp
 python3 -m venv venv
 source venv/bin/activate
 
-# Install with dev dependencies
-pip install -e ".[dev]"
+# Install dependencies
+pip install -r requirements.txt
 
-# Run code formatting
-black src/ test/
-isort src/ test/
-
-# Run linting
-flake8 src/ test/
-mypy src/
+# Run tests (if available)
+python -m pytest tests/
 ```
 
 ### Areas for Contribution
 
 - 🎵 **Improve accuracy**: Better chord detection and fingering algorithms
-- 🎸 **Add features**: Support for alternate tunings, capo positions
+- 🎸 **Add features**: Support for alternate tunings, capo positions, MIDI export
 - 🌍 **Translations**: Add support for more languages
 - 📊 **Visualization**: PDF export, better ASCII rendering
-- 🧪 **Testing**: Increase test coverage
+- 🧪 **Testing**: Add test coverage
 - 📖 **Documentation**: Improve examples and tutorials
 - 🐛 **Bug fixes**: Fix issues and edge cases
 - ⚡ **Performance**: Optimize processing speed
@@ -795,40 +749,24 @@ You are free to use, modify, and distribute this software for any purpose, inclu
 
 ## 🗺️ Roadmap
 
-### Short-term (v1.1)
+### Short-term
 - [ ] MIDI file export
 - [ ] Support for alternative tunings (Drop D, DADGAD, etc.)
 - [ ] Capo position detection
 - [ ] Improved fingering customization
 
-### Medium-term (v1.5)
+### Medium-term
 - [ ] PDF tablature export with music notation
-- [ ] Real-time audio processing (live transcription)
 - [ ] Guitar Pro format export
-- [ ] Web interface for non-technical users
+- [ ] Web-based demo interface
 
-### Long-term (v2.0)
-- [ ] Mobile app integration
+### Long-term
 - [ ] Support for multiple instruments (bass, ukulele)
-- [ ] Collaborative tab editing
-- [ ] Cloud processing for faster results
 - [ ] Machine learning for custom fingering preferences
-
-## 📊 Performance Benchmarks
-
-Tested on MacBook Pro M1:
-
-| Audio Length | Sequential | Parallel | Speedup |
-|--------------|-----------|----------|---------|
-| 30s          | ~8s       | ~8s      | 1x      |
-| 60s          | ~25s      | ~12s     | 2.1x    |
-| 120s         | ~95s      | ~22s     | 4.3x    |
-| 180s         | ~170s     | ~35s     | 4.9x    |
-
-*Note: Parallel processing activates automatically for files > 45 seconds*
+- [ ] Real-time audio processing
 
 ---
 
-**Made with ❤️ by the open-source community**
+**Made with ❤️ for the open-source community**
 
 **Star this repo** ⭐ if you find it useful!
