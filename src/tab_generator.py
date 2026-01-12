@@ -223,6 +223,21 @@ class TabGenerator:
                 current_shape = self.chord_templates.get(chord_name, {})
 
                 role = n.get('role', 'harmony')
+                
+                # Harmonic Filtering
+                # If enabled, remove 'harmony' notes that don't fit the detected chord
+                # This drastically cleans up the arrangement to sound like the chord.
+                snap_to_chord = config.get('post_processing', 'snap_harmony_to_key', True)
+                if snap_to_chord and role == 'harmony' and chord_name != "N.C." and current_shape:
+                    # Calculate allowable pitches (semitone classes 0-11)
+                    allowable_pcs = set()
+                    for s, f in current_shape.items():
+                        p = (self.tuning[s] + f) % 12
+                        allowable_pcs.add(p)
+                    
+                    if (n['pitch'] % 12) not in allowable_pcs:
+                        continue # Skip this note (dissonant / busy)
+
                 # Role overrides distinct is_bass logic usually, but keep fallback
                 is_bass = (role == 'bass') or (n['pitch'] <= self.bass_threshold)
                 

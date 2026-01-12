@@ -200,19 +200,50 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
     role_priority = {'melody': 0, 'bass': 1, 'harmony': 2}
     all_notes.sort(key=lambda x: (x['start'], role_priority.get(x.get('role', 'harmony'), 2), -x['velocity']))
     
-    unique_notes = []
-    if all_notes:
-        unique_notes.append(all_notes[0])
-        for i in range(1, len(all_notes)):
-            curr_n = all_notes[i]
-            prev_n = unique_notes[-1]
+    # 3. Clean and Quantize
+    def _clean_and_quantize(notes: List[Dict[str, Any]], bpm: float) -> List[Dict[str, Any]]:
+        if not notes: return []
+        
+        min_vel = config.get('post_processing', 'min_velocity', 0.3)
+        min_dur = config.get('post_processing', 'min_note_duration', 0.1)
+        do_quantize = config.get('post_processing', 'quantize', True)
+        
+        # 16th note duration in seconds
+        beat_dur = 60.0 / bpm
+        sixteenth_dur = beat_dur / 4.0
+        
+        cleaned = []
+        for n in notes:
+            # Velocity Filter
+            if n['velocity'] < min_vel: continue
             
-            # If same pitch and very close time
-            if abs(curr_n['start'] - prev_n['start']) < 0.05 and curr_n['pitch'] == prev_n['pitch']:
-                # If roles are different, keep higher priority (already sorted)
-                continue
+            # Duration Filter
+            if (n['end'] - n['start']) < min_dur: continue
             
-            unique_notes.append(curr_n)
+            new_n = n.copy()
+            if do_quantize:
+                # Snap start to nearest 16th
+                grid_idx = round(n['start'] / sixteenth_dur)
+                new_n['start'] = grid_idx * sixteenth_dur
+                # Snap duration too? Maybe just Ensure end > start
+                new_n['end'] = max(new_n['start'] + sixteenth_dur, n['end'])
+                
+            cleaned.append(new_n)
+            
+        # Deduplicate (Keep highest velocity for same pitch & start time)
+        # Key: (start_time, pitch) -> note
+        note_map = {}
+        for n in cleaned:
+            k = (int(n['start'] * 100), n['pitch']) # quantization to 10ms for key
+            if k not in note_map:
+                note_map[k] = n
+            else:
+                if n['velocity'] > note_map[k]['velocity']:
+                    note_map[k] = n
+                    
+        return sorted(note_map.values(), key=lambda x: x['start'])
+
+    unique_notes = _clean_and_quantize(unique_notes, detected_bpm)
 
     return unique_notes, detected_bpm
 

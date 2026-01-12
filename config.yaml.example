@@ -24,6 +24,13 @@ audio:
   source_separation: false
   separation_model: "htdemucs"  # Options: htdemucs, htdemucs_ft, mdx_extra_q
 
+# Post-processing for Clean Tabs
+post_processing:
+  min_note_duration: 0.1     # Drop notes shorter than 0.1s
+  min_velocity: 0.3          # Drop weak notes (0.0-1.0)
+  quantize: true             # Snap notes to 16th grid
+  snap_harmony_to_key: true  # Force accompaniment notes to match detected chords
+
 # Tablature Generation Settings
 tablature:
   # Standard guitar tuning (can be customized)

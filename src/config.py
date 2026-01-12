@@ -17,6 +17,12 @@ DEFAULT_CONFIG = {
         'source_separation': False,  # Disabled by default for speed
         'separation_model': 'htdemucs'
     },
+    'post_processing': {
+        'min_note_duration': 0.1,    # Minimum duration in seconds
+        'min_velocity': 0.3,         # Minimum velocity (confidence) 0.0-1.0
+        'quantize': True,            # Snap to 16th notes
+        'snap_harmony_to_key': True  # Force harmony notes to match detected chord
+    },
     'tablature': {
         'standard_tuning': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
         'bass_threshold': 50,
