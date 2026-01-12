@@ -200,7 +200,7 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
     role_priority = {'melody': 0, 'bass': 1, 'harmony': 2}
     all_notes.sort(key=lambda x: (x['start'], role_priority.get(x.get('role', 'harmony'), 2), -x['velocity']))
     
-    # 3. Clean and Quantize
+    # Define _clean_and_quantize helper
     def _clean_and_quantize(notes: List[Dict[str, Any]], bpm: float) -> List[Dict[str, Any]]:
         if not notes: return []
         
@@ -225,16 +225,14 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
                 # Snap start to nearest 16th
                 grid_idx = round(n['start'] / sixteenth_dur)
                 new_n['start'] = grid_idx * sixteenth_dur
-                # Snap duration too? Maybe just Ensure end > start
                 new_n['end'] = max(new_n['start'] + sixteenth_dur, n['end'])
                 
             cleaned.append(new_n)
             
-        # Deduplicate (Keep highest velocity for same pitch & start time)
-        # Key: (start_time, pitch) -> note
+        # Deduplicate Logic
         note_map = {}
         for n in cleaned:
-            k = (int(n['start'] * 100), n['pitch']) # quantization to 10ms for key
+            k = (int(n['start'] * 100), n['pitch']) 
             if k not in note_map:
                 note_map[k] = n
             else:
@@ -243,7 +241,8 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
                     
         return sorted(note_map.values(), key=lambda x: x['start'])
 
-    unique_notes = _clean_and_quantize(unique_notes, detected_bpm)
+    # Apply cleaning
+    unique_notes = _clean_and_quantize(all_notes, detected_bpm)
 
     return unique_notes, detected_bpm
 
