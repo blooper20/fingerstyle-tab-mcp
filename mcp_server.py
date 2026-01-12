@@ -10,11 +10,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 import gettext
 from mcp.server.fastmcp import FastMCP
+from src.config import config
 
 # Setup logging to STDERR
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=getattr(logging, config.get('logging', 'level', 'INFO').upper()),
+    format=config.get('logging', 'format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
     stream=sys.stderr
 )
 logger = logging.getLogger(__name__)
@@ -33,10 +34,11 @@ translate = gettext.translation('messages', localedir, fallback=True)
 _ = translate.gettext
 
 # Create MCP Server
-mcp = FastMCP("Fingerstyle Tab Generator")
+server_name = config.get('mcp', 'server_name', "Fingerstyle Tab Generator")
+mcp = FastMCP(server_name)
 
 print("------------------------------------------------", file=sys.stderr, flush=True)
-print("🚀 FINGERSTYLE MCP SERVER IS NOW ONLINE AND READY", file=sys.stderr, flush=True)
+print(f"🚀 {server_name.upper()} IS NOW ONLINE AND READY", file=sys.stderr, flush=True)
 print("------------------------------------------------", file=sys.stderr, flush=True)
 
 # Result cache to avoid re-processing identical files
@@ -161,7 +163,8 @@ def tweak_tab_fingering(note_pitch: int, preferred_string: int) -> str:
 @mcp.resource("guitar://tuning/standard")
 def get_standard_tuning() -> str:
     """Returns standard guitar tuning information."""
-    return _("Standard Tuning: E2, A2, D3, G3, B3, E4 (82.41Hz - 329.63Hz)")
+    tuning = config.get('tablature', 'standard_tuning', ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'])
+    return _("Standard Tuning: {} (defined in config)").format(", ".join(tuning))
 
 if __name__ == "__main__":
     mcp.run()

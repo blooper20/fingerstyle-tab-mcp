@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 
-AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 타브 악보로 자동 변환해주는 MCP (Model Context Protocol) 서버입니다. 최신 딥러닝 모델로 기타 연주를 분석하고 정확하고 연주 가능한 타브 악보를 생성합니다.
+AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 타브 악보로 자동 변환해주는 MCP (Model Context Protocol) 서버입니다. 최신 딥러닝 모델로 기타 연주를 분석하고, 사용자의 로컬 컴퓨터에서 안전하게 실행되며 타브 악보를 생성합니다.
 
 [한국어 문서](./README_KR.md) | [English](./README.md)
 
@@ -758,7 +758,6 @@ chore: 의존성 업데이트
 ### 중기
 - [ ] 악보 표기가 포함된 PDF 타브 내보내기
 - [ ] Guitar Pro 형식 내보내기
-- [ ] 웹 기반 데모 인터페이스
 
 ### 장기
 - [ ] 여러 악기 지원 (베이스, 우쿨렐레)

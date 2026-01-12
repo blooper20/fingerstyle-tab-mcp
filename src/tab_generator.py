@@ -4,10 +4,12 @@ import logging
 from typing import List, Dict, Tuple, Optional, Any
 from music21 import pitch
 
+from src.config import config
+
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, config.get('logging', 'level', 'INFO').upper()),
+    format=config.get('logging', 'format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 )
 logger = logging.getLogger(__name__)
 
@@ -22,11 +24,11 @@ class TabGenerator:
         Initialize the TabGenerator.
 
         Args:
-            tuning: List of string tunings (default: standard tuning E2-E4)
-            bpm: Beats per minute (default: 75, range: 40-200)
+            tuning: List of string tunings (default: standard tuning from config)
+            bpm: Beats per minute (default: 75, constrained by config limits)
         """
         if tuning is None:
-            tuning = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
+            tuning = config.get('tablature', 'standard_tuning', ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'])
 
         try:
             self.tuning = [pitch.Pitch(t).midi for t in tuning]
@@ -35,16 +37,19 @@ class TabGenerator:
             raise ValueError(_("Invalid tuning: {}").format(tuning)) from e
 
         self.num_strings = len(self.tuning)
-        self.bpm = max(40, min(bpm, 200))  # Realistic BPM limits
-        self.bass_threshold = 50
+        min_bpm = config.get('audio', 'min_bpm', 40)
+        max_bpm = config.get('audio', 'max_bpm', 200)
+        self.bpm = max(min_bpm, min(bpm, max_bpm))
+        
+        self.bass_threshold = config.get('tablature', 'bass_threshold', 50)
         self.capo = 0
 
         logger.info(_("TabGenerator initialized - Tuning: {}, BPM: {:.1f}").format(
             tuning, self.bpm
         )) 
 
-        # Precision Chord Templates based on reference charts
-        self.chord_templates = {
+        # Precision Chord Templates
+        all_templates = {
             "C": {1: 3, 2: 2, 3: 0, 4: 1, 5: 0},
             "Cm": {1: 3, 2: 5, 3: 5, 4: 4, 5: 3},
             "C7": {1: 3, 2: 2, 3: 3, 4: 1, 5: 0},
@@ -90,6 +95,19 @@ class TabGenerator:
             "Fadd9": {1: 3, 2: 3, 3: 2, 4: 1, 5: 3},
         }
 
+        # Filter based on enabled chord types in config (simple implementation)
+        # This assumes chord names follow conventions (m, 7, sus, etc.)
+        enabled_types = config.get('chord_detection', 'enabled_chord_types', {})
+        self.chord_templates = {}
+        
+        for name, template in all_templates.items():
+            if 'm' in name and '7' not in name and not enabled_types.get('minor', True): continue
+            if '7' in name and not enabled_types.get('seventh', True): continue
+            if 'sus' in name and not enabled_types.get('suspended', True): continue
+            if 'add9' in name and not enabled_types.get('add9', True): continue
+            # Default to include if passing checks or simple major
+            self.chord_templates[name] = template
+
     def find_best_pos(self, midi_pitch: int, is_bass: bool = False,
                       chord_shape: Optional[Dict[int, int]] = None) -> Optional[Tuple[int, int]]:
         """
@@ -112,10 +130,14 @@ class TabGenerator:
                 fret = shifted_pitch - self.tuning[s_idx]
                 if 0 <= fret <= 15:
                     score = 0
-                    # Prefer lower frets (0-5) for easier playability
-                    if 0 <= fret <= 5:
+                    # Prefer preferred fret range (default 0-5) for easier playability
+                    pref = config.get('tablature', 'preferred_fret_range', {'min': 0, 'max': 5})
+                    min_f = pref.get('min', 0)
+                    max_f = pref.get('max', 5)
+                    
+                    if min_f <= fret <= max_f:
                         score += 800
-                        score += (5 - fret) * 15
+                        score += (max_f - fret) * 15
                     else:
                         score -= (fret * 150)
 
@@ -154,7 +176,7 @@ class TabGenerator:
             return _("No notes detected.")
 
         try:
-            slots_per_measure = 16
+            slots_per_measure = config.get('tablature', 'slots_per_measure', 16)
             sec_per_measure = (60 / self.bpm) * 4
             max_time = max(n['end'] for n in notes)
             num_measures = int(max_time / sec_per_measure) + 1
@@ -234,8 +256,9 @@ class TabGenerator:
                 if root_pitch in pitches:
                     scores[name] += 5
 
+        min_score = config.get('chord_detection', 'min_score', 5)
         best = max(scores, key=scores.get)
-        detected = best if scores[best] > 5 else "N.C."
+        detected = best if scores[best] > min_score else "N.C."
 
         if detected != "N.C.":
             logger.debug(_("Detected chord: {}").format(detected))
@@ -243,7 +266,7 @@ class TabGenerator:
         return detected
 
     def _render_layout(self, full_tab, measure_chords, num_measures, slots_per_measure):
-        measures_per_line = 4
+        measures_per_line = config.get('tablature', 'measures_per_line', 4)
         headers = ['e|', 'B|', 'G|', 'D|', 'A|', 'E|']
         header_text = _("🎸 Fingerstyle Precision Analysis")
         output = [f"{header_text} (BPM: {self.bpm:.1f})\n"]

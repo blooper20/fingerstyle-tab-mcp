@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 
-An AI-powered MCP (Model Context Protocol) server that converts guitar audio recordings into high-quality fingerstyle tablature. This tool uses cutting-edge AI models to analyze your guitar playing and generate accurate, playable tabs automatically.
+An AI-powered MCP (Model Context Protocol) server that converts guitar audio recordings into high-quality fingerstyle tablature. This tool runs locally on your machine, using cutting-edge AI models to analyze your guitar playing and generate accurate tabs.
 
 [한국어 문서](./README_KR.md) | [English](./README.md)
 
@@ -758,7 +758,6 @@ You are free to use, modify, and distribute this software for any purpose, inclu
 ### Medium-term
 - [ ] PDF tablature export with music notation
 - [ ] Guitar Pro format export
-- [ ] Web-based demo interface
 
 ### Long-term
 - [ ] Support for multiple instruments (bass, ukulele)

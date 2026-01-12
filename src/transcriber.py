@@ -7,11 +7,12 @@ from typing import List, Dict, Tuple, Any
 from pathlib import Path
 from basic_pitch.inference import predict
 from basic_pitch import ICASSP_2022_MODEL_PATH
+from src.config import config
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, config.get('logging', 'level', 'INFO').upper()),
+    format=config.get('logging', 'format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 )
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ translate = gettext.translation('messages', localedir, fallback=True)
 _ = translate.gettext
 
 # Supported audio formats
-SUPPORTED_FORMATS = {'.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac'}
+SUPPORTED_FORMATS = set(config.get('audio', 'supported_formats', ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']))
 
 # Global model cache to avoid re-loading for every request
 _MODEL_CACHE = None
@@ -113,7 +114,8 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
     
     # 1. Detect BPM
     logger.info(_("Detecting tempo..."))
-    y, sr = librosa.load(audio_path_str, offset=start_offset, duration=min(60, duration if duration else 60))
+    bpm_detect_duration = min(60, duration if duration else 60)
+    y, sr = librosa.load(audio_path_str, offset=start_offset, duration=bpm_detect_duration)
     tempo, __ = librosa.beat.beat_track(y=y, sr=sr)
     detected_bpm = float(tempo)
     logger.info(_("Detected BPM: {:.2f}").format(detected_bpm))
@@ -124,12 +126,13 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
         total_duration = min(total_duration, duration)
     
     # Parallelize only if significant length
-    if total_duration < 45:
+    parallel_threshold = config.get('audio', 'parallel_threshold', 45.0)
+    if total_duration < parallel_threshold:
         notes = _transcribe_chunk(audio_path_str, duration=total_duration, start_offset=start_offset)
         return notes, detected_bpm
 
-    chunk_size = 30.0
-    overlap = 2.0
+    chunk_size = config.get('audio', 'chunk_size', 30.0)
+    overlap = config.get('audio', 'chunk_overlap', 2.0)
     chunks = []
     curr = start_offset
     end_time = start_offset + total_duration
