@@ -18,11 +18,11 @@ DEFAULT_CONFIG = {
         'separation_model': 'htdemucs'
     },
     'post_processing': {
-        'min_note_duration': 0.1,    # Minimum duration in seconds
-        'min_velocity': 0.3,         # Minimum velocity (confidence) 0.0-1.0
+        'min_note_duration': 0.15,   # Increased duration threshold to remove noise
+        'min_velocity': 0.45,        # Stricter velocity threshold
         'quantize': True,            # Snap to 16th notes
-        'snap_harmony_to_key': True,  # Force harmony notes to match detected chord
-        'max_polyphony': 4           # Maximum simultaneous notes (for playability)
+        'snap_harmony_to_key': True, # Force harmony notes to match detected chord
+        'max_polyphony': 3           # Limit simultaneous notes for playability
     },
     'tablature': {
         'auto_transpose': True,      # Automatically shift to guitar-friendly keys (C, G, D, A, E)

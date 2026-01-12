@@ -213,7 +213,8 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
         sixteenth_dur = beat_dur / 4.0
         
         cleaned = []
-        max_poly = config.get('post_processing', 'max_polyphony', 4)
+        # Enforce strict fingering limits
+        max_poly = config.get('post_processing', 'max_polyphony', 3) # Reduced from 4 to 3
         
         for n in notes:
             # Velocity Filter
@@ -241,7 +242,7 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
             
         final_notes = []
         for t, group in time_groups.items():
-            # Deduplicate pitches at same time (keep max velocity)
+            # Deduplicate pitches at same time
             pitch_map = {}
             for n in group:
                 if n['pitch'] not in pitch_map or n['velocity'] > pitch_map[n['pitch']]['velocity']:
@@ -249,12 +250,41 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
             
             unique_in_group = list(pitch_map.values())
             
-            # Limit polyphony (Keep top N loudest)
+            # Priority Sorting: Melody > Bass > Harmony > Velocity
+            # We need to rely on the role assigned earlier OR pitch
+            # Heuristic: Highest pitch = Melody, Lowest = Bass. Middle = Harmony.
+            unique_in_group.sort(key=lambda x: x['pitch']) 
+            
+            # If we have too many notes, keep:
+            # 1. The highest note (Melody)
+            # 2. The lowest note (Bass)
+            # 3. The loudest remaining notes
             if len(unique_in_group) > max_poly:
-                unique_in_group.sort(key=lambda x: -x['velocity'])
-                unique_in_group = unique_in_group[:max_poly]
+                melody = unique_in_group[-1]
+                bass = unique_in_group[0]
+                others = unique_in_group[1:-1]
+                
+                # Keep top (max_poly - 2) from others
+                others.sort(key=lambda x: -x['velocity'])
+                keep_others = others[:max(0, max_poly - 2)]
+                
+                limited_group = [bass] + keep_others + [melody]
+                # Remove duplicates if bass==melody (unlikely but possible)
+                unique_in_group = []
+                seen_p = set()
+                for n in limited_group:
+                    if n['pitch'] not in seen_p:
+                        unique_in_group.append(n)
+                        seen_p.add(n['pitch'])
                 
             final_notes.extend(unique_in_group)
+            
+        # Horizontal Cleaning (Speed Limit)
+        # If notes are too close together (humanly impossible 32nd notes strumming?), thin them out.
+        # Simple implementation: Ensure unique start times are at least X ms apart? 
+        # No, 16th quantization handles that.
+        # But we might have too many 16th notes in a row (machine gun effect).
+        # Let's trust quantization for now, but the Polyphony Limit is key.
 
         return sorted(final_notes, key=lambda x: x['start'])
 

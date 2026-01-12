@@ -286,10 +286,20 @@ class TabGenerator:
 
                     fret_str = str(fret)
                     for i, c in enumerate(fret_str):
-                        if slot_idx + i < slots_per_measure:
-                            # Only write if empty (First come first served - Melody is sorted first)
-                            if full_tab[line_idx][m_idx][slot_idx + i] == '-':
-                                full_tab[line_idx][m_idx][slot_idx + i] = c
+                        write_idx = slot_idx + i
+                        if write_idx < slots_per_measure:
+                            # 1. Collision Check (Don't overwrite existing notes)
+                            if full_tab[line_idx][m_idx][write_idx] != '-':
+                                continue
+                                
+                            # 2. Physical Spacer Check (Don't play same string too fast)
+                            # If previous 16th note on this string was played, skip this one
+                            # This clears up the 'machine gun' effect (1-1-1-1)
+                            if write_idx > 0 and full_tab[line_idx][m_idx][write_idx - 1] != '-':
+                                continue
+                            
+                            # Write the note
+                            full_tab[line_idx][m_idx][write_idx] = c
 
             logger.info(_("Tab generation completed successfully"))
             return self._render_layout(full_tab, measure_chords, num_measures, slots_per_measure)
