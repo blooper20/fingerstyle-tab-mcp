@@ -10,17 +10,18 @@ An AI-powered MCP (Model Context Protocol) server that converts guitar audio rec
 
 ## ✨ Features
 
+- **🎧 Source Separation**: Advanced multi-track analysis using Demucs (separates Melody, Bass, and Harmony for precise arrangement)
 - **🎵 AI-Powered Transcription**: High-precision note detection using Spotify's Basic Pitch deep learning model
 - **⚡ Parallel Processing**: Process long audio files (45+ seconds) efficiently using multi-threaded chunk processing
-- **🎯 Smart Fingering**: Chord-based mapping logic that prioritizes playable open-chord shapes (0-5 fret focus)
-- **🎼 Advanced Chord Recognition**: Automatic chord detection with 40+ chord shapes (Major, Minor, 7th, sus4, dim, aug, etc.)
-- **⏱️ Auto BPM Detection**: Intelligent tempo detection using Librosa for accurate measure-based formatting
+- **🎯 Smart Fingering**: Role-based mapping that places Melody on high strings and Bass on low strings
+- **🎼 Advanced Chord Recognition**: Automatic chord detection with Simplicity Bias for catchy, standard progressions
+- **🎹 Auto-Transpose**: Automatically shifts difficult keys to guitar-friendly keys (C, G, D, A, E)
+- **🧹 Intelligent Cleaning**: Strict polyphony limits, machine-gun arpeggio prevention, and noise reduction for clean, readable tabs
+- **⏱️ Auto BPM Detection**: Rhythm-aware tempo detection using Drums/Bass stems
 - **💾 Smart Caching**: Result caching to avoid re-processing identical files
-- **🔍 Fuzzy File Matching**: Intelligent file discovery in the resource directory
 - **🤖 MCP Integration**: Seamless integration with Claude Desktop for interactive tab refinement
 - **🌍 Internationalization**: Full multi-language support (English, Korean)
 - **⚙️ Highly Configurable**: YAML-based configuration for customizing all aspects of transcription
-- **📊 Comprehensive Logging**: Detailed logging with proper stderr redirection for debugging
 
 ## 📋 Table of Contents
 
@@ -46,10 +47,11 @@ An AI-powered MCP (Model Context Protocol) server that converts guitar audio rec
 Before you begin, ensure you have the following installed:
 
 - **Python 3.10 or higher**: [Download Python](https://www.python.org/downloads/)
-- **FFmpeg**: Required for audio processing
+- **FFmpeg**: Required for audio processing and source separation
   - **macOS**: `brew install ffmpeg`
   - **Ubuntu/Debian**: `sudo apt-get install ffmpeg`
   - **Windows**: Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+- **UV (Recommended)** or pip
 
 ### Installation
 
@@ -149,7 +151,7 @@ Once configured, you can interact with Claude using natural language:
 >
 > 🎸 Fingerstyle Precision Analysis (BPM: 123.05)
 >
-> Dm              G               C               F
+>   Dm              G               C               F
 > e|----------------|----------------|----------------|----------------|
 > B|3---3-------3---|0---0-------0---|1---1-------1---|1---1-------1---|
 > G|2---2-------2---|0---0-------0---|0---0-------0---|2---2-------2---|
@@ -260,64 +262,38 @@ tab = generator.generate_ascii_tab(notes)
 
 ## 🔥 Features in Detail
 
-### 1. Parallel Processing
+### 1. Source Separation & Role Analysis
 
-For audio files longer than 45 seconds, the server automatically:
-- Splits the file into 30-second chunks with 2-second overlap
-- Processes chunks in parallel using multiple worker threads
-- Merges results and deduplicates overlapping notes
-- **Result**: Significantly reduced processing time for long files
+The engine separates audio into **Vocals, Bass, and Other** stems using **Demucs**.
+- **Vocals** → Mapped to **Melody** (High strings)
+- **Bass** → Mapped to **Bass** (Low strings)
+- **Other** → Mapped to **Harmony** (Middle voicing)
+
+### 2. Intelligent Post-Processing
+
+Advanced cleaning algorithms ensure the output is **playable**:
+- **Strict Polyphony Limit**: Caps simultaneous notes to 3 (Bass + Melody + 1 Harmony) to prevent impossible shapes.
+- **Arpeggio Spacer**: Prevents "machine-gun" repeating notes on the same string.
+- **Harmonic Snapping**: Removes harmony notes that clash with the detected chord.
+
+### 3. Auto-Transpose (Smart Capo)
+
+If a song is in a difficult key (e.g., B Major), the system automatically:
+1. Detects the root key
+2. Transposes it to the nearest **Open String Friendly Key** (C, G, D, A, E)
+3. Optimizes fingering for the new key (prioritizing 0-3 frets)
+
+### 4. Smart Caching
+
+Results (including separated stems) are cached to avoid re-processing:
 
 ```python
-# Automatic parallel processing for long files
-notes, bpm = transcribe_audio("long_song.mp3")  # Auto-parallelized if > 45s
-```
-
-### 2. Smart Caching
-
-Results are cached to avoid re-processing:
-
-```python
-# First call: processes audio
-analyze_audio_to_tab("song.mp3")  # Takes ~30s
+# First call: processes audio (incl. Demucs separation)
+analyze_audio_to_tab("song.mp3")  # Takes ~60-90s
 
 # Second call: returns cached result
 analyze_audio_to_tab("song.mp3")  # Instant!
-
-# Different parameters: new processing
-analyze_audio_to_tab("song.mp3", duration_seconds=30)  # Takes ~5s
 ```
-
-### 3. Fuzzy File Matching
-
-No need for exact filenames:
-
-```python
-# All of these work:
-analyze_audio_to_tab("someone like you")
-analyze_audio_to_tab("someonelikeyou.mp3")
-analyze_audio_to_tab("Adelle-- someone like you-null.mp3")
-```
-
-The server normalizes filenames and finds the best match in the `resource/` directory.
-
-### 4. Intelligent Chord Detection
-
-Recognizes 40+ chord types:
-- **Major**: C, G, F, D, A, E, etc.
-- **Minor**: Am, Dm, Em, etc.
-- **7th Chords**: C7, G7, Cmaj7, Dm7, etc.
-- **Suspended**: Csus4, Gsus2, etc.
-- **Extended**: Cadd9, C6, etc.
-- **Altered**: Cdim, Caug, etc.
-
-### 5. Smart Fingering Algorithm
-
-The tab generator:
-- Prioritizes open chord shapes (0-5 fret range)
-- Minimizes hand position changes
-- Groups notes into chord shapes where possible
-- Places bass notes on appropriate strings
 
 ## ⚙️ Configuration
 
@@ -332,25 +308,27 @@ cp config.yaml.example config.yaml
 ```yaml
 # Audio Processing
 audio:
+  source_separation: true   # Enable Demucs source separation (Recommended for high quality)
+  separation_model: "htdemucs"
   default_bpm: 120.0
-  min_bpm: 40
-  max_bpm: 200
-  parallel_threshold: 45.0  # Enable parallel processing for files > 45s
-  chunk_size: 30.0          # Chunk size in seconds
-  chunk_overlap: 2.0        # Overlap between chunks
+  parallel_threshold: 45.0
+
+# Post-processing for Clean Tabs
+post_processing:
+  min_note_duration: 0.15     # Drop short noise
+  min_velocity: 0.45          # Strict velocity threshold
+  quantize: true              # Snap to 16th grid
+  snap_harmony_to_key: true   # Clean up accompaniment
+  max_polyphony: 3            # Max simultaneous notes
 
 # Tablature Generation
 tablature:
+  auto_transpose: true        # Auto shift to C/G/D/A/E
   standard_tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
-  bass_threshold: 50        # MIDI note threshold for bass detection
-  slots_per_measure: 16     # Granularity of tab grid
-  min_fret: 0
-  max_fret: 12
-
-# Logging
-logging:
-  level: INFO  # DEBUG, INFO, WARNING, ERROR
-  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  slots_per_measure: 16
+  preferred_fret_range:
+    min: 0
+    max: 5                    # Prioritize open position
 ```
 
 For all available options, see [config.yaml.example](config.yaml.example).

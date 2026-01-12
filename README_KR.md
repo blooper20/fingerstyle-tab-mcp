@@ -10,17 +10,18 @@ AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 �
 
 ## ✨ 주요 기능
 
+- **🎧 음원 분리 (Source Separation)**: Demucs를 활용해 멜로디, 베이스, 화음을 분리하여 정밀하게 역할별 편곡 수행
 - **🎵 AI 기반 음악 분석**: Spotify의 Basic Pitch 딥러닝 모델을 활용한 고정밀 음정 감지
 - **⚡ 병렬 처리**: 45초 이상의 긴 오디오 파일을 멀티스레드 청크 처리로 효율적 분석
-- **🎯 스마트 운지 매핑**: 연주 가능한 오픈 코드 형태(0-5프렛 중심)를 우선하는 지능형 운지 로직
-- **🎼 고급 코드 인식**: 40개 이상의 코드 형태 자동 인식 (메이저, 마이너, 7th, sus4, dim, aug 등)
-- **⏱️ BPM 자동 감지**: Librosa를 통한 지능형 템포 분석 및 정확한 마디 정렬
+- **🎯 핑거스타일 최적화**: 멜로디는 고음현, 베이스는 저음현에 배치하는 역할 기반 운지 알고리즘
+- **🎹 자동 이조 (Auto-Transpose)**: 연주하기 까다로운 키를 개방현 활용이 쉬운 키(C, G, D, A, E)로 자동 변환
+- **🎼 대중적 코드 진행**: 복잡한 코드보다 친숙한 메이저/마이너 코드를 우선하는 심플 코드 알고리즘
+- **🧹 지능형 클리닝**: 동시 발음 수 제한(3음), 머신건 아르페지오 방지, 노이즈 제거로 연주 가능한 "깔끔한 악보" 생성
+- **⏱️ BPM 자동 감지**: 베이스/드럼 트랙을 활용한 정확한 리듬 분석
 - **💾 스마트 캐싱**: 동일한 파일 재처리 방지를 위한 결과 캐싱
-- **🔍 퍼지 파일 매칭**: resource 디렉토리에서 지능형 파일 탐색
 - **🤖 MCP 통합**: Claude Desktop과 완벽한 통합으로 대화형 타브 악보 개선
 - **🌍 다국어 지원**: 완전한 다국어 지원 (한국어, 영어)
 - **⚙️ 높은 설정 가능성**: YAML 기반 설정으로 모든 분석 옵션 커스터마이징
-- **📊 상세한 로깅**: stderr 리다이렉션으로 디버깅을 위한 체계적 로깅
 
 ## 📋 목차
 
@@ -46,7 +47,7 @@ AI 기술을 활용하여 기타 연주 오디오를 고품질 핑거스타일 �
 시작하기 전에 다음 프로그램이 설치되어 있는지 확인하세요:
 
 - **Python 3.10 이상**: [Python 다운로드](https://www.python.org/downloads/)
-- **FFmpeg**: 오디오 처리에 필요
+- **FFmpeg**: 오디오 처리 및 음원 분리에 필수
   - **macOS**: `brew install ffmpeg`
   - **Ubuntu/Debian**: `sudo apt-get install ffmpeg`
   - **Windows**: [ffmpeg.org](https://ffmpeg.org/download.html)에서 다운로드
@@ -149,7 +150,7 @@ tail -f ~/Library/Logs/Claude/mcp-server-fingerstyle-mcp.log
 >
 > 🎸 핑거스타일 정밀 분석 (BPM: 123.05)
 >
-> Dm              G               C               F
+>   Dm              G               C               F
 > e|----------------|----------------|----------------|----------------|
 > B|3---3-------3---|0---0-------0---|1---1-------1---|1---1-------1---|
 > G|2---2-------2---|0---0-------0---|0---0-------0---|2---2-------2---|
@@ -260,64 +261,27 @@ tab = generator.generate_ascii_tab(notes)
 
 ## 🔥 주요 기능 상세
 
-### 1. 병렬 처리
+### 1. 음원 분리 및 역할 분석 (Source Separation)
 
-45초 이상의 오디오 파일에 대해 자동으로:
-- 2초 겹침을 가진 30초 청크로 파일 분할
-- 여러 워커 스레드로 청크 병렬 처리
-- 결과 병합 및 겹치는 음표 중복 제거
-- **결과**: 긴 파일의 처리 시간을 크게 단축
+Demucs 엔진을 사용하여 오디오를 **보컬, 베이스, 기타, 드럼**으로 분리합니다.
+ - **보컬** → **멜로디** 역할 (고음현 배치)
+ - **베이스** → **베이스** 역할 (저음현 배치)
+ - **기타/반주** → **화성** 역할 (중음역 배치)
 
-```python
-# 긴 파일에 대한 자동 병렬 처리
-notes, bpm = transcribe_audio("long_song.mp3")  # 45초 이상이면 자동 병렬화
-```
+### 2. 지능형 정제 알고리즘 (Intelligent Processing)
 
-### 2. 스마트 캐싱
+사람이 실제로 연주할 수 있는 악보를 만들기 위해 강력한 필터를 적용합니다:
+ - **동시 발음 수 제한**: 한 순간에 최대 3개의 음(베이스+멜로디+화성1)만 남겨 손 꼬임을 방지합니다.
+ - **아르페지오 정리**: 같은 줄을 연달아 빠르게 튕기는 '머신건' 패턴을 제거합니다.
+ - **화성 정리**: 감지된 코드와 어울리지 않는 불협화음을 자동으로 음소거합니다.
 
-재처리를 피하기 위한 결과 캐싱:
+### 3. 자동 이조 (Auto-Transpose)
 
-```python
-# 첫 번째 호출: 오디오 처리
-analyze_audio_to_tab("song.mp3")  # ~30초 소요
+원곡의 키가 기타로 치기 어려운 경우(예: B Major), 시스템이 자동으로 **개방현을 활용하기 좋은 키(C, G, D, A, E)**로 변환합니다. 일종의 '스마트 카포' 역할을 수행하여 초보자도 쉽게 연주할 수 있게 돕습니다.
 
-# 두 번째 호출: 캐시된 결과 반환
-analyze_audio_to_tab("song.mp3")  # 즉시!
+### 4. 스마트 캐싱
 
-# 다른 파라미터: 새로운 처리
-analyze_audio_to_tab("song.mp3", duration_seconds=30)  # ~5초 소요
-```
-
-### 3. 퍼지 파일 매칭
-
-정확한 파일명 불필요:
-
-```python
-# 다음 모두 작동:
-analyze_audio_to_tab("someone like you")
-analyze_audio_to_tab("someonelikeyou.mp3")
-analyze_audio_to_tab("Adelle-- someone like you-null.mp3")
-```
-
-서버가 파일명을 정규화하여 `resource/` 디렉토리에서 최적 매치를 찾습니다.
-
-### 4. 지능형 코드 인식
-
-40개 이상의 코드 타입 인식:
-- **메이저**: C, G, F, D, A, E 등
-- **마이너**: Am, Dm, Em 등
-- **7th 코드**: C7, G7, Cmaj7, Dm7 등
-- **Suspended**: Csus4, Gsus2 등
-- **확장**: Cadd9, C6 등
-- **변형**: Cdim, Caug 등
-
-### 5. 스마트 운지 알고리즘
-
-타브 생성기:
-- 오픈 코드 형태 우선 (0-5 프렛 범위)
-- 손 위치 변경 최소화
-- 가능한 곳에서 음표를 코드 형태로 그룹화
-- 베이스 음을 적절한 줄에 배치
+Demucs 분리 결과와 분석 데이터는 캐싱되어, 두 번째 시도부터는 즉시 결과가 나옵니다.
 
 ## ⚙️ 설정
 
@@ -332,25 +296,27 @@ cp config.yaml.example config.yaml
 ```yaml
 # 오디오 처리
 audio:
+  source_separation: true   # Demucs 음원 분리 활성화 (고품질 권장)
+  separation_model: "htdemucs"
   default_bpm: 120.0
-  min_bpm: 40
-  max_bpm: 200
-  parallel_threshold: 45.0  # 45초 이상 파일에 병렬 처리 활성화
-  chunk_size: 30.0          # 청크 크기 (초)
-  chunk_overlap: 2.0        # 청크 간 겹침
+  parallel_threshold: 45.0
+
+# 정제 및 후처리 (Post-processing)
+post_processing:
+  min_note_duration: 0.15     # 짧은 노이즈 제거
+  min_velocity: 0.45          # 약한 음표 제거 (감도 조절)
+  quantize: true              # 16분음표 단위로 박자 보정
+  snap_harmony_to_key: true   # 불협화음 제거
+  max_polyphony: 3            # 동시 발음 수 제한 (난이도 조절)
 
 # 타브 악보 생성
 tablature:
+  auto_transpose: true        # C/G/D/A/E 키로 자동 변환
   standard_tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
-  bass_threshold: 50        # 베이스 감지를 위한 MIDI 음정 임계값
-  slots_per_measure: 16     # 타브 그리드 세분성
-  min_fret: 0
-  max_fret: 12
-
-# 로깅
-logging:
-  level: INFO  # DEBUG, INFO, WARNING, ERROR
-  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  slots_per_measure: 16
+  preferred_fret_range:
+    min: 0
+    max: 5                    # 오픈 포지션 우선
 ```
 
 모든 사용 가능한 옵션은 [config.yaml.example](config.yaml.example)을 참조하세요.
