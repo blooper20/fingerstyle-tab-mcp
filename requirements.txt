@@ -1,5 +1,5 @@
 # MCP Server Framework
-mcp>=1.0.0
+mcp
 
 # Audio Processing & AI
 basic-pitch>=0.3.0
@@ -13,3 +13,4 @@ music21>=9.1.0
 # Utilities
 pyyaml>=6.0.0
 python-dotenv>=1.0.0
+demucs

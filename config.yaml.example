@@ -18,6 +18,12 @@ audio:
   min_bpm: 40
   max_bpm: 200
 
+  # Source Separation (Demucs)
+  # Removes vocals/drums to improve guitar transcription accuracy
+  # Warning: Increases processing time significantly
+  source_separation: false
+  separation_model: "htdemucs"  # Options: htdemucs, htdemucs_ft, mdx_extra_q
+
 # Tablature Generation Settings
 tablature:
   # Standard guitar tuning (can be customized)

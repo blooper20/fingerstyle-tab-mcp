@@ -13,7 +13,9 @@ DEFAULT_CONFIG = {
         'max_bpm': 200,
         'parallel_threshold': 45.0,
         'chunk_size': 30.0,
-        'chunk_overlap': 2.0
+        'chunk_overlap': 2.0,
+        'source_separation': False,  # Disabled by default for speed
+        'separation_model': 'htdemucs'
     },
     'tablature': {
         'standard_tuning': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],

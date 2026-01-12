@@ -42,6 +42,7 @@ class TabGenerator:
         self.bpm = max(min_bpm, min(bpm, max_bpm))
         
         self.bass_threshold = config.get('tablature', 'bass_threshold', 50)
+        self.config_max_fret = config.get('tablature', 'max_fret', 15)
         self.capo = 0
 
         logger.info(_("TabGenerator initialized - Tuning: {}, BPM: {:.1f}").format(
@@ -109,52 +110,68 @@ class TabGenerator:
             self.chord_templates[name] = template
 
     def find_best_pos(self, midi_pitch: int, is_bass: bool = False,
-                      chord_shape: Optional[Dict[int, int]] = None) -> Optional[Tuple[int, int]]:
+                      chord_shape: Optional[Dict[int, int]] = None, role: str = 'harmony') -> Optional[Tuple[int, int]]:
         """
-        Find the best string and fret position for a note, prioritizing playability.
-
-        Args:
-            midi_pitch: MIDI pitch number (0-127)
-            is_bass: Whether this is a bass note
-            chord_shape: Dictionary mapping string indices to fret positions
-
-        Returns:
-            Tuple of (string_index, fret_number) or None if no position found
+        Find optimal string and fret position with role-based heuristics.
         """
         best_cand = None
-        max_score = -999999
+        max_score = -float('inf')
 
-        for octave_shift in [-24, -12, 0, 12]:
+        # Try various octave shifts to fit the range, prioritizing the original pitch
+        shifts = [0, -12, 12]
+        # Melody prefers original or higher, Bass prefers lower
+        if role == 'bass': shifts = [0, -12, -24]
+        if role == 'melody': shifts = [0, 12, -12]
+
+        for octave_shift in shifts:
             shifted_pitch = midi_pitch + octave_shift
             for s_idx in range(self.num_strings):
                 fret = shifted_pitch - self.tuning[s_idx]
-                if 0 <= fret <= 15:
+                
+                # Use self.config_max_fret if available, else 15
+                max_fret = getattr(self, 'config_max_fret', 15)
+                
+                if 0 <= fret <= max_fret:
                     score = 0
+                    
+                    # 1. Role-based string preference
+                    # Strings are 0 (Low E) to 5 (High E) in our tuning list
+                    if role == 'melody':
+                        # Prefer high strings (indices 3, 4, 5)
+                        if s_idx >= 3: score += 500
+                        # Penalize low strings significantly for melody
+                        if s_idx <= 1: score -= 1000
+                    
+                    elif role == 'bass' or is_bass:
+                        # Prefer low strings (indices 0, 1, 2)
+                        if s_idx <= 2: score += 500
+                        # Penalize high strings for bass
+                        if s_idx >= 4: score -= 1000
+                    
+                    # 2. Chord Context (High priority)
+                    if chord_shape and s_idx in chord_shape and chord_shape[s_idx] == fret:
+                        score += 800
+                    
+                    # 3. Fret Range Preference (Open chords 0-5)
                     # Prefer preferred fret range (default 0-5) for easier playability
                     pref = config.get('tablature', 'preferred_fret_range', {'min': 0, 'max': 5})
                     min_f = pref.get('min', 0)
                     max_f = pref.get('max', 5)
                     
                     if min_f <= fret <= max_f:
-                        score += 800
-                        score += (max_f - fret) * 15
+                        score += 300
+                        score += (max_f - fret) * 10
                     else:
-                        score -= (fret * 150)
+                        score -= (fret * 20) # Penalize high frets
 
-                    # Bonus if note matches chord shape
-                    if chord_shape and s_idx in chord_shape and chord_shape[s_idx] == fret:
-                        score += 2000
-
-                    # Bass notes prefer lower strings
-                    if is_bass and s_idx <= 2:
-                        score += 100
-                    # Melody notes prefer higher strings
-                    if not is_bass and s_idx >= 3:
-                        score += 50
-
+                    # Select best score
                     if score > max_score:
                         max_score = score
                         best_cand = (s_idx, fret)
+            
+            # If we found a very good candidate in original octave, stop (don't shift unnecessarily)
+            if best_cand and max_score > 1000:
+                break
 
         return best_cand
 
@@ -205,8 +222,16 @@ class TabGenerator:
                 chord_name = measure_chords[m_idx]
                 current_shape = self.chord_templates.get(chord_name, {})
 
-                is_bass = n['pitch'] <= self.bass_threshold
-                pos = self.find_best_pos(n['pitch'], is_bass, current_shape)
+                role = n.get('role', 'harmony')
+                # Role overrides distinct is_bass logic usually, but keep fallback
+                is_bass = (role == 'bass') or (n['pitch'] <= self.bass_threshold)
+                
+                pos = self.find_best_pos(
+                    n['pitch'], 
+                    is_bass=is_bass, 
+                    chord_shape=current_shape,
+                    role=role
+                )
 
                 if pos:
                     s_idx, fret = pos
@@ -217,7 +242,9 @@ class TabGenerator:
                     fret_str = str(fret)
                     for i, c in enumerate(fret_str):
                         if slot_idx + i < slots_per_measure:
-                            full_tab[line_idx][m_idx][slot_idx + i] = c
+                            # Only write if empty (First come first served - Melody is sorted first)
+                            if full_tab[line_idx][m_idx][slot_idx + i] == '-':
+                                full_tab[line_idx][m_idx][slot_idx + i] = c
 
             logger.info(_("Tab generation completed successfully"))
             return self._render_layout(full_tab, measure_chords, num_measures, slots_per_measure)

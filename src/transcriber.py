@@ -105,56 +105,116 @@ def _transcribe_chunk(audio_path: str, duration: float = None, start_offset: flo
             try: os.remove(temp_path)
             except: pass
 
+from src.audio_processor import separate_audio
+
 def transcribe_audio(audio_path: str, duration: float = None, start_offset: float = 0.0) -> Tuple[List[Dict[str, Any]], float]:
     """
-    Analyzes an audio file, using parallel processing for files longer than 45 seconds.
+    Transcribe audio with source-separated-aware arrangement logic.
     """
     validated_path = validate_audio_file(audio_path)
     audio_path_str = str(validated_path)
     
-    # 1. Detect BPM
-    logger.info(_("Detecting tempo..."))
+    # 0. Source Separation
+    # Returns {'vocals':..., 'bass':..., 'other':...} or {'original':...}
+    stems = separate_audio(audio_path_str)
+    
+    # 1. Detect BPM (Use original or drums/bass for best rhythm)
+    bpm_source = stems.get('drums', stems.get('original', stems.get('bass', audio_path_str)))
+    logger.info(_("Detecting tempo from: {}").format(os.path.basename(bpm_source)))
+    
     bpm_detect_duration = min(60, duration if duration else 60)
-    y, sr = librosa.load(audio_path_str, offset=start_offset, duration=bpm_detect_duration)
+    y, sr = librosa.load(bpm_source, offset=start_offset, duration=bpm_detect_duration)
     tempo, __ = librosa.beat.beat_track(y=y, sr=sr)
     detected_bpm = float(tempo)
     logger.info(_("Detected BPM: {:.2f}").format(detected_bpm))
 
-    # 2. Determine chunks
-    total_duration = float(librosa.get_duration(path=audio_path_str))
-    if duration:
-        total_duration = min(total_duration, duration)
-    
-    # Parallelize only if significant length
-    parallel_threshold = config.get('audio', 'parallel_threshold', 45.0)
-    if total_duration < parallel_threshold:
-        notes = _transcribe_chunk(audio_path_str, duration=total_duration, start_offset=start_offset)
-        return notes, detected_bpm
-
-    chunk_size = config.get('audio', 'chunk_size', 30.0)
-    overlap = config.get('audio', 'chunk_overlap', 2.0)
-    chunks = []
-    curr = start_offset
-    end_time = start_offset + total_duration
-    
-    while curr < end_time:
-        d = min(chunk_size + overlap, end_time - curr)
-        chunks.append((curr, d))
-        if curr + chunk_size >= end_time: break
-        curr += chunk_size
-
-    logger.info(_("Parallel Analysis: Splitting into {} chunks to finish in < 1 min").format(len(chunks)))
-    
-    from concurrent.futures import ThreadPoolExecutor
+    # 2. Transcription Logic
     all_notes = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(_transcribe_chunk, audio_path_str, d, s) for s, d in chunks]
-        for i, future in enumerate(futures):
-            try:
-                all_notes.extend(future.result())
-            except Exception as e:
-                logger.error(_("Error in chunk {}: {}").format(i+1, str(e)))
-                raise RuntimeError(_("Parallel processing failed in chunk {}: {}").format(i+1, str(e))) from e
+    
+    # Helper to transcribe a specific file and assign a role
+    def process_stem(path: str, role: str) -> List[Dict[str, Any]]:
+        if not os.path.exists(path): return []
+        
+        # Determine duration for this stem
+        s_dur = float(librosa.get_duration(path=path))
+        if duration: s_dur = min(s_dur, duration)
+        
+        parallel_threshold = config.get('audio', 'parallel_threshold', 45.0)
+        
+        stem_notes = []
+        if s_dur < parallel_threshold:
+             stem_notes = _transcribe_chunk(path, duration=s_dur, start_offset=start_offset)
+        else:
+            # Parallel chunking for this stem
+            chunk_size = config.get('audio', 'chunk_size', 30.0)
+            overlap = config.get('audio', 'chunk_overlap', 2.0)
+            chunks = []
+            curr = start_offset
+            end_t = start_offset + s_dur
+            while curr < end_t:
+                d = min(chunk_size + overlap, end_t - curr)
+                chunks.append((curr, d))
+                if curr + chunk_size >= end_t: break
+                curr += chunk_size
+            
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(_transcribe_chunk, path, d, s) for s, d in chunks]
+                for f in futures:
+                    try: stem_notes.extend(f.result())
+                    except: pass
+
+        # Assign role
+        for n in stem_notes:
+            n['role'] = role
+        return stem_notes
+
+    # If we have stems, process them
+    if 'vocals' in stems:
+        logger.info(_("Transcribing stems for fingerstyle arrangement..."))
+        # We can parallelize stem processing too
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_voc = executor.submit(process_stem, stems.get('vocals'), 'melody')
+            future_bas = executor.submit(process_stem, stems.get('bass'), 'bass')
+            future_oth = executor.submit(process_stem, stems.get('other'), 'harmony')
+            
+            try: all_notes.extend(future_voc.result())
+            except Exception as e: logger.error(f"Vocal transcription failed: {e}")
+            
+            try: all_notes.extend(future_bas.result())
+            except Exception as e: logger.error(f"Bass transcription failed: {e}")
+            
+            try: all_notes.extend(future_oth.result())
+            except Exception as e: logger.error(f"Harmony transcription failed: {e}")
+            
+        logger.info(_("Merged {} notes from stems.").format(len(all_notes)))
+        
+    else:
+        # Fallback to original single-file processing
+        logger.info(_("Transcribing single audio file..."))
+        all_notes = process_stem(stems['original'], 'harmony')
+
+    # 3. Deduplicate (Modified for roles)
+    # Sort by time, then priority (Melody > Bass > Harmony)
+    role_priority = {'melody': 0, 'bass': 1, 'harmony': 2}
+    all_notes.sort(key=lambda x: (x['start'], role_priority.get(x.get('role', 'harmony'), 2), -x['velocity']))
+    
+    unique_notes = []
+    if all_notes:
+        unique_notes.append(all_notes[0])
+        for i in range(1, len(all_notes)):
+            curr_n = all_notes[i]
+            prev_n = unique_notes[-1]
+            
+            # If same pitch and very close time
+            if abs(curr_n['start'] - prev_n['start']) < 0.05 and curr_n['pitch'] == prev_n['pitch']:
+                # If roles are different, keep higher priority (already sorted)
+                continue
+            
+            unique_notes.append(curr_n)
+
+    return unique_notes, detected_bpm
 
     # 3. Deduplicate
     all_notes.sort(key=lambda x: (x['start'], x['pitch']))
