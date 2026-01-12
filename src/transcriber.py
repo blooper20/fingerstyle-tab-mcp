@@ -213,6 +213,8 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
         sixteenth_dur = beat_dur / 4.0
         
         cleaned = []
+        max_poly = config.get('post_processing', 'max_polyphony', 4)
+        
         for n in notes:
             # Velocity Filter
             if n['velocity'] < min_vel: continue
@@ -229,17 +231,32 @@ def transcribe_audio(audio_path: str, duration: float = None, start_offset: floa
                 
             cleaned.append(new_n)
             
-        # Deduplicate Logic
-        note_map = {}
+        # Polyphony Limiter & Deduplicate
+        # Group by start time
+        time_groups = {}
         for n in cleaned:
-            k = (int(n['start'] * 100), n['pitch']) 
-            if k not in note_map:
-                note_map[k] = n
-            else:
-                if n['velocity'] > note_map[k]['velocity']:
-                    note_map[k] = n
-                    
-        return sorted(note_map.values(), key=lambda x: x['start'])
+            t = int(n['start'] * 100)
+            if t not in time_groups: time_groups[t] = []
+            time_groups[t].append(n)
+            
+        final_notes = []
+        for t, group in time_groups.items():
+            # Deduplicate pitches at same time (keep max velocity)
+            pitch_map = {}
+            for n in group:
+                if n['pitch'] not in pitch_map or n['velocity'] > pitch_map[n['pitch']]['velocity']:
+                    pitch_map[n['pitch']] = n
+            
+            unique_in_group = list(pitch_map.values())
+            
+            # Limit polyphony (Keep top N loudest)
+            if len(unique_in_group) > max_poly:
+                unique_in_group.sort(key=lambda x: -x['velocity'])
+                unique_in_group = unique_in_group[:max_poly]
+                
+            final_notes.extend(unique_in_group)
+
+        return sorted(final_notes, key=lambda x: x['start'])
 
     # Apply cleaning
     unique_notes = _clean_and_quantize(all_notes, detected_bpm)

@@ -109,6 +109,41 @@ class TabGenerator:
             # Default to include if passing checks or simple major
             self.chord_templates[name] = template
 
+    def _auto_transpose(self, notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Detect key and transpose notes to the nearest guitar-friendly key (C, G, D, A, E).
+        Effectively acts as a 'Smart Capo'.
+        """
+        if not notes: return notes
+        
+        # 1. Simple Weighted Chroma Analysis to find root
+        chroma = [0] * 12
+        for n in notes:
+            chroma[n['pitch'] % 12] += 1
+            
+        detected_root = chroma.index(max(chroma))
+        
+        # 2. Guitar Friendly Roots (C=0, D=2, E=4, G=7, A=9)
+        friendly_roots = [0, 2, 4, 7, 9]
+        
+        # Find nearest friendly root
+        best_shift = 0
+        min_dist = 999
+        
+        for fr in friendly_roots:
+            # Calculate distance (considering wrap-around)
+            diff = (fr - detected_root + 6) % 12 - 6
+            if abs(diff) < abs(min_dist):
+                min_dist = diff
+                best_shift = diff
+                
+        if best_shift != 0:
+            logger.info(_("Auto-Transpose: Shifting pitch by {} semitones to fit guitar key.").format(best_shift))
+            for n in notes:
+                n['pitch'] += best_shift
+                
+        return notes
+
     def find_best_pos(self, midi_pitch: int, is_bass: bool = False,
                       chord_shape: Optional[Dict[int, int]] = None, role: str = 'harmony') -> Optional[Tuple[int, int]]:
         """
@@ -119,7 +154,6 @@ class TabGenerator:
 
         # Try various octave shifts to fit the range, prioritizing the original pitch
         shifts = [0, -12, 12]
-        # Melody prefers original or higher, Bass prefers lower
         if role == 'bass': shifts = [0, -12, -24]
         if role == 'melody': shifts = [0, 12, -12]
 
@@ -134,43 +168,35 @@ class TabGenerator:
                 if 0 <= fret <= max_fret:
                     score = 0
                     
-                    # 1. Role-based string preference
-                    # Strings are 0 (Low E) to 5 (High E) in our tuning list
-                    if role == 'melody':
-                        # Prefer high strings (indices 3, 4, 5)
-                        if s_idx >= 3: score += 500
-                        # Penalize low strings significantly for melody
-                        if s_idx <= 1: score -= 1000
+                    # 1. Extreme Open Position Preference (The "Easy Tab" Factor)
+                    if fret == 0: 
+                        score += 3000 # Open strings are King
+                    elif fret <= 3: 
+                        score += 1500 # First position is Queen
+                    elif fret <= 5: 
+                        score += 500  # Acceptable
+                    else: 
+                        score -= (fret * 100) # Check high frets heavily
                     
+                    # 2. Role-based string preference
+                    if role == 'melody':
+                        if s_idx >= 3: score += 500
+                        if s_idx <= 1: score -= 1000
                     elif role == 'bass' or is_bass:
-                        # Prefer low strings (indices 0, 1, 2)
                         if s_idx <= 2: score += 500
-                        # Penalize high strings for bass
                         if s_idx >= 4: score -= 1000
                     
-                    # 2. Chord Context (High priority)
+                    # 3. Chord Context
                     if chord_shape and s_idx in chord_shape and chord_shape[s_idx] == fret:
-                        score += 800
+                        score += 2000 # Always obey the chord
                     
-                    # 3. Fret Range Preference (Open chords 0-5)
-                    # Prefer preferred fret range (default 0-5) for easier playability
-                    pref = config.get('tablature', 'preferred_fret_range', {'min': 0, 'max': 5})
-                    min_f = pref.get('min', 0)
-                    max_f = pref.get('max', 5)
-                    
-                    if min_f <= fret <= max_f:
-                        score += 300
-                        score += (max_f - fret) * 10
-                    else:
-                        score -= (fret * 20) # Penalize high frets
-
                     # Select best score
                     if score > max_score:
                         max_score = score
                         best_cand = (s_idx, fret)
             
-            # If we found a very good candidate in original octave, stop (don't shift unnecessarily)
-            if best_cand and max_score > 1000:
+            # If we found an ideal candidate in original octave, stop
+            if best_cand and max_score > 2000:
                 break
 
         return best_cand
@@ -193,6 +219,10 @@ class TabGenerator:
             return _("No notes detected.")
 
         try:
+            # Auto-Transpose (Smart Capo)
+            if config.get('tablature', 'auto_transpose', True):
+                notes = self._auto_transpose(notes)
+
             slots_per_measure = config.get('tablature', 'slots_per_measure', 16)
             sec_per_measure = (60 / self.bpm) * 4
             max_time = max(n['end'] for n in notes)
