@@ -57,8 +57,9 @@ def separate_audio(input_path: str, output_dir: Optional[str] = None) -> Dict[st
     logger.info("This process may take a few minutes...")
 
     try:
+        import sys
         cmd = [
-            "demucs",
+            sys.executable, "-m", "demucs",
             "-n", model_name,
             "--out", str(output_dir),
             "-j", "2",  # Use 2 threads
