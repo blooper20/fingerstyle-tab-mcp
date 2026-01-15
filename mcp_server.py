@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 try:
     from src.transcriber import transcribe_audio
     from src.tab_generator import create_tab
+    from src.audio_processor import separate_audio
 except ImportError as e:
     logger.error(f"Import failed: {e}")
     sys.exit(1)
@@ -43,6 +44,43 @@ print("------------------------------------------------", file=sys.stderr, flush
 
 # Result cache to avoid re-processing identical files
 _TAB_CACHE = {}
+
+def _resolve_file_path(file_path: str) -> str:
+    """Helper to resolve file path using fuzzy matching in resource/ directory."""
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    resource_dir = os.path.join(project_root, 'resource')
+    
+    full_path = os.path.abspath(os.path.expanduser(file_path))
+    
+    # 1. Direct match
+    if os.path.exists(full_path):
+        return full_path
+        
+    print(f"DEBUG: Path {full_path} not found. Fuzzy matching in {resource_dir}", file=sys.stderr, flush=True)
+    filename = os.path.basename(full_path)
+    
+    if os.path.exists(resource_dir):
+        import re
+        def normalize(s):
+            # Remove extension and keep only alphanumeric
+            name_only = os.path.splitext(s)[0]
+            return re.sub(r'[^a-zA-Z0-9]', '', name_only).lower()
+        
+        target_norm = normalize(filename)
+        available_files = os.listdir(resource_dir)
+        
+        best_match = None
+        
+        for f in available_files:
+            if f.startswith('.'): continue
+            f_norm = normalize(f)
+            if f_norm == target_norm or target_norm in f_norm or f_norm in target_norm:
+                found_path = os.path.join(resource_dir, f)
+                if os.path.isfile(found_path):
+                    print(f"DEBUG: SUCCESSful fuzzy match: {f}", file=sys.stderr, flush=True)
+                    return found_path
+                    
+    return full_path # Return original (exists check handles failure later)
 
 @mcp.tool()
 def analyze_audio_to_tab(file_path: str, duration_seconds: float = None, start_seconds: float = 0.0) -> str:
@@ -64,38 +102,12 @@ def analyze_audio_to_tab(file_path: str, duration_seconds: float = None, start_s
 
     print(f"DEBUG: Tool called for: {file_path} (Start: {start_seconds}s, Duration: {duration_seconds}s)", file=sys.stderr, flush=True)
 
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    resource_dir = os.path.join(project_root, 'resource')
+    full_path = _resolve_file_path(file_path)
     
-    full_path = os.path.abspath(os.path.expanduser(file_path))
-    
-    # 1. Improved Fuzzy Matching
+    # Check if exists
     if not os.path.exists(full_path):
-        print(f"DEBUG: Path {full_path} not found. Fuzzy matching in {resource_dir}", file=sys.stderr, flush=True)
-        filename = os.path.basename(full_path)
-        
-        if os.path.exists(resource_dir):
-            import re
-            def normalize(s):
-                # Remove extension and keep only alphanumeric
-                name_only = os.path.splitext(s)[0]
-                return re.sub(r'[^a-zA-Z0-9]', '', name_only).lower()
-            
-            target_norm = normalize(filename)
-            available_files = os.listdir(resource_dir)
-            
-            for f in available_files:
-                if f.startswith('.'): continue
-                f_norm = normalize(f)
-                if f_norm == target_norm or target_norm in f_norm or f_norm in target_norm:
-                    found_path = os.path.join(resource_dir, f)
-                    if os.path.isfile(found_path):
-                        print(f"DEBUG: SUCCESSful fuzzy match: {f}", file=sys.stderr, flush=True)
-                        full_path = found_path
-                        break
-
-    # 2. Final check with explicit failure message
-    if not os.path.exists(full_path):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        resource_dir = os.path.join(project_root, 'resource')
         files = os.listdir(resource_dir) if os.path.exists(resource_dir) else []
         err_msg = (
             "CRITICAL ERROR: TAB GENERATION FAILED. NO FILE FOUND.\n"
@@ -122,6 +134,38 @@ def analyze_audio_to_tab(file_path: str, duration_seconds: float = None, start_s
     except Exception as e:
         logger.error(_("Error during analysis: {}").format(str(e)))
         return _("Error occurred during processing (Check server logs for details): {}").format(str(e))
+
+@mcp.tool()
+def extract_audio_stems(file_path: str) -> str:
+    """
+    Separates an audio file into 6 stems: Vocals, Bass, Drums, Guitar, Piano, and Other.
+    Useful for remixing or practicing specific parts.
+    
+    Args:
+        file_path: The filename/path of the audio file to separate.
+        
+    Returns:
+        List of generated WAV file paths.
+    """
+    print(f"DEBUG: Extract Stems called for: {file_path}", file=sys.stderr, flush=True)
+    full_path = _resolve_file_path(file_path)
+    
+    if not os.path.exists(full_path):
+        return _("File not found: {}").format(file_path)
+        
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            # Use htdemucs_6s for enhanced 6-stem separation
+            stems = separate_audio(full_path, model_name='htdemucs_6s')
+            
+        result = _("Source Separation Complete!\nFiles saved in: {}\n\n").format(os.path.dirname(list(stems.values())[0]))
+        for role, path in stems.items():
+            result += f"- **{role.capitalize()}**: `{path}`\n"
+            
+        return result
+    except Exception as e:
+        logger.error(_("Error during separation: {}").format(str(e)))
+        return _("Separation failed: {}").format(str(e))
 
 @mcp.tool()
 def list_available_audio_files() -> str:

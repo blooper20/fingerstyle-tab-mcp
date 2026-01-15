@@ -8,22 +8,24 @@ from src.config import config
 
 logger = logging.getLogger(__name__)
 
-def separate_audio(input_path: str, output_dir: Optional[str] = None) -> Dict[str, str]:
+def separate_audio(input_path: str, output_dir: Optional[str] = None, model_name: Optional[str] = None) -> Dict[str, str]:
     """
     Separate audio into stems using Demucs and return paths to stems.
     
     Args:
         input_path: Path to the input audio file.
         output_dir: Directory to save separated files.
+        model_name: Demucs model to use (e.g. 'htdemucs', 'htdemucs_6s').
         
     Returns:
-        Dictionary with keys 'vocals', 'bass', 'other', 'drums' pointing to file paths.
+        Dictionary with keys 'vocals', 'bass', 'other', 'drums' (and 'piano', 'guitar') pointing to file paths.
         If separation checks fail or is disabled, returns {'original': input_path}.
     """
-    if not config.get('audio', 'source_separation', False):
+    if not config.get('audio', 'source_separation', False) and model_name is None:
         return {'original': input_path}
 
-    model_name = config.get('audio', 'separation_model', 'htdemucs')
+    if model_name is None:
+        model_name = config.get('audio', 'separation_model', 'htdemucs')
     
     input_file = Path(input_path)
     if not input_file.exists():
@@ -41,14 +43,14 @@ def separate_audio(input_path: str, output_dir: Optional[str] = None) -> Dict[st
     track_name = input_file.stem
     base_output = Path(output_dir) / model_name / track_name
     
-    stems = {
-        'vocals': base_output / "vocals.wav",
-        'bass': base_output / "bass.wav",
-        'other': base_output / "other.wav",
-        'drums': base_output / "drums.wav"
-    }
+    # Basic stems
+    expected_stems = ['vocals', 'bass', 'drums', 'other']
+    if '6s' in model_name:
+        expected_stems.extend(['guitar', 'piano'])
+        
+    stems = {name: base_output / f"{name}.wav" for name in expected_stems}
     
-    # Quick check if all exist
+    # Check if all exist
     if all(s.exists() for s in stems.values()):
         logger.info(f"Stems found in cache for: {track_name}")
         return {k: str(v) for k, v in stems.items()}
@@ -70,13 +72,13 @@ def separate_audio(input_path: str, output_dir: Optional[str] = None) -> Dict[st
         logger.info("Source separation completed successfully.")
         
         result_paths = {}
-        for k, v in stems.items():
-            if v.exists():
-                result_paths[k] = str(v)
-            else:
-                logger.warning(f"Expected stem {k} not found at {v}")
+        # Dynamically find all wav files in the output directory
+        if base_output.exists():
+            for f in base_output.glob("*.wav"):
+                result_paths[f.stem] = str(f)
         
         if not result_paths:
+             logger.warning("No stems found after separation.")
              return {'original': input_path}
              
         return result_paths
